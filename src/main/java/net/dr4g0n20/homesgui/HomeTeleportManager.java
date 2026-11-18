@@ -25,7 +25,7 @@ public final class HomeTeleportManager implements Listener {
     private final HomesGUI plugin;
     private final Map<UUID, BukkitTask> countdownTasks = new HashMap<UUID, BukkitTask>();
     private final Map<UUID, Long> cooldowns = new HashMap<UUID, Long>();
-    private final Map<UUID, Long> unsafeConfirmations = new HashMap<UUID, Long>();
+    private final Map<UUID, UnsafeConfirmation> unsafeConfirmations = new HashMap<UUID, UnsafeConfirmation>();
 
     public HomeTeleportManager(HomesGUI plugin) {
         this.plugin = plugin;
@@ -50,9 +50,12 @@ public final class HomeTeleportManager implements Listener {
 
         if (isUnsafe(destination)) {
             long window = Math.max(1, plugin.getConfig().getInt("unsafe-confirmation-window", 10)) * 1000L;
-            Long previous = unsafeConfirmations.get(uuid);
-            if (previous == null || now - previous > window) {
-                unsafeConfirmations.put(uuid, now);
+            UnsafeConfirmation previous = unsafeConfirmations.get(uuid);
+            String destinationKey = destination.getWorld().getName() + ":" + destination.getBlockX()
+                    + ":" + destination.getBlockY() + ":" + destination.getBlockZ();
+            if (previous == null || !previous.destinationKey.equals(destinationKey)
+                    || now - previous.timestamp > window) {
+                unsafeConfirmations.put(uuid, new UnsafeConfirmation(destinationKey, now));
                 player.sendMessage(ChatColor.RED + "Warning: " + ChatColor.YELLOW
                         + "This home may be unsafe (hazardous blocks or no safe floor).");
                 player.sendMessage(ChatColor.YELLOW + "Click the same home again within "
@@ -98,7 +101,7 @@ public final class HomeTeleportManager implements Listener {
         countdownTasks.put(uuid, task);
     }
 
-    private boolean isUnsafe(Location location) {
+    private static final class UnsafeConfirmation {\n        private final String destinationKey;\n        private final long timestamp;\n\n        private UnsafeConfirmation(String destinationKey, long timestamp) {\n            this.destinationKey = destinationKey;\n            this.timestamp = timestamp;\n        }\n    }\n\n    private boolean isUnsafe(Location location) {
         if (location == null || location.getWorld() == null) return true;
 
         Block feet = location.getBlock();
