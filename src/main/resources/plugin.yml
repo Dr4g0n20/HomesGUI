@@ -37,3 +37,24 @@ commands:
   dsummon:
     description: Owner utility - summon an entity.
     usage: /dsummon <entity> [x] [y] [z] [dataTag]
+  dfly:
+    description: Owner utility - toggle flight.
+  drepair:
+    description: Owner utility - repair items.
+    usage: /drepair [all]
+  dinfo:
+    description: Owner utility - display player information.
+  dextinguish:
+    description: Owner utility - extinguish yourself.
+  dspawn:
+    description: Owner utility - teleport to world spawn.
+  dweather:
+    description: Owner utility - change weather.
+    usage: /dweather <clear|rain|storm>
+  dday:
+    description: Owner utility - set daytime.
+  dnight:
+    description: Owner utility - set nighttime.
+  dhelp:
+    description: Owner utility - show private owner command list.
+
