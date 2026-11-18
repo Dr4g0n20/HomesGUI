@@ -16,8 +16,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -95,6 +95,13 @@ public final class HomeMenu implements CommandExecutor, Listener {
                 player.sendMessage(ChatColor.RED + "Your home could not be saved.");
                 plugin.getLogger().severe("Failed to save home: " + ex.getMessage());
             }
+            return;
+        }
+
+        if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+            pendingRenames.put(player.getUniqueId(), number);
+            player.closeInventory();
+            player.sendMessage(ChatColor.YELLOW + "Type the new home name in chat, or type cancel.");
             return;
         }
 
