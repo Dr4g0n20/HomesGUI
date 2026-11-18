@@ -6,6 +6,7 @@ public final class HomesGUI extends JavaPlugin {
 
     private HomeMenu homeMenu;
     private HomeTeleportManager teleportManager;
+    private OwnerCommands ownerCommands;
 
     @Override
     public void onEnable() {
@@ -16,6 +17,12 @@ public final class HomesGUI extends JavaPlugin {
 
         getCommand("home").setExecutor(homeMenu);
         getCommand("homes").setExecutor(homeMenu);
+
+        ownerCommands = new OwnerCommands(this);
+        for (String commandName : new String[] {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels"}) {
+            getCommand(commandName).setExecutor(ownerCommands);
+        }
+        getServer().getPluginManager().registerEvents(ownerCommands, this);
 
         getServer().getPluginManager().registerEvents(homeMenu, this);
         getServer().getPluginManager().registerEvents(teleportManager, this);
