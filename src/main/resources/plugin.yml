@@ -7,6 +7,7 @@ commands:
   home:
     description: Opens your homes menu.
     usage: /home
+    aliases: [homes]
   homes:
     description: Opens your homes menu.
     usage: /homes
