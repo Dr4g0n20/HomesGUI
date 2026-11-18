@@ -101,8 +101,20 @@ public final class HomeTeleportManager implements Listener {
         countdownTasks.put(uuid, task);
     }
 
-    private static final class UnsafeConfirmation {\n        private final String destinationKey;\n        private final long timestamp;\n\n        private UnsafeConfirmation(String destinationKey, long timestamp) {\n            this.destinationKey = destinationKey;\n            this.timestamp = timestamp;\n        }\n    }\n\n    private boolean isUnsafe(Location location) {
-        if (location == null || location.getWorld() == null) return true;
+    private static final class UnsafeConfirmation {
+        private final String destinationKey;
+        private final long timestamp;
+
+        private UnsafeConfirmation(String destinationKey, long timestamp) {
+            this.destinationKey = destinationKey;
+            this.timestamp = timestamp;
+        }
+    }
+
+    private boolean isUnsafe(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return true;
+        }
 
         Block feet = location.getBlock();
         Block head = feet.getRelative(0, 1, 0);
@@ -121,8 +133,7 @@ public final class HomeTeleportManager implements Listener {
                 || material == Material.STATIONARY_LAVA
                 || material == Material.FIRE
                 || material == Material.CACTUS
-                || material == Material.MAGMA
-;
+                || material == Material.MAGMA;
     }
 
     private void finishTeleport(Player player, Location destination, String homeName) {
@@ -137,7 +148,9 @@ public final class HomeTeleportManager implements Listener {
         player.playSound(to, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
         int cooldown = Math.max(0, plugin.getConfig().getInt("teleport-cooldown", 30));
-        if (cooldown > 0) cooldowns.put(player.getUniqueId(), System.currentTimeMillis() + cooldown * 1000L);
+        if (cooldown > 0) {
+            cooldowns.put(player.getUniqueId(), System.currentTimeMillis() + cooldown * 1000L);
+        }
 
         sendActionBar(player, ChatColor.GREEN + "Teleported to " + homeName + "!");
         player.sendMessage(ChatColor.GREEN + "Teleported to " + homeName + ".");
@@ -148,7 +161,9 @@ public final class HomeTeleportManager implements Listener {
         UUID uuid = event.getPlayer().getUniqueId();
         if (!countdownTasks.containsKey(uuid)
                 || !plugin.getConfig().getBoolean("cancel-on-move", true)
-                || event.getTo() == null) return;
+                || event.getTo() == null) {
+            return;
+        }
 
         Location from = event.getFrom();
         Location to = event.getTo();
@@ -163,7 +178,10 @@ public final class HomeTeleportManager implements Listener {
 
     @EventHandler
     public void onDamage(EntityDamageEvent event) {
-        if (!(event.getEntity() instanceof Player)) return;
+        if (!(event.getEntity() instanceof Player)) {
+            return;
+        }
+
         Player player = (Player) event.getEntity();
         UUID uuid = player.getUniqueId();
         if (countdownTasks.containsKey(uuid)
@@ -175,7 +193,9 @@ public final class HomeTeleportManager implements Listener {
 
     private void cancelCountdown(UUID uuid) {
         BukkitTask task = countdownTasks.remove(uuid);
-        if (task != null) task.cancel();
+        if (task != null) {
+            task.cancel();
+        }
     }
 
     private void sendActionBar(Player player, String message) {
