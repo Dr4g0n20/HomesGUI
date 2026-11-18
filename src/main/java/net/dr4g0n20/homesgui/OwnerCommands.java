@@ -6,7 +6,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.StructureType;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -159,33 +158,46 @@ public final class OwnerCommands implements CommandExecutor, Listener {
         } else if (cmd.equals("dlocate")) {
             if (args.length != 1) {
                 player.sendMessage(ChatColor.YELLOW + "Usage: /dlocate <structure>");
-                player.sendMessage(ChatColor.GRAY + "Structures: Village, Stronghold, Mineshaft, Monument, Mansion, DesertTemple, JungleTemple, SwampHut, Igloo, NetherFortress, EndCity");
+                player.sendMessage(ChatColor.GRAY + "Structures: Village, Stronghold, Mineshaft, Monument, Mansion, Temple, Fortress, EndCity");
                 return true;
             }
-            String structureName = args[0].toLowerCase().replace("-", "").replace("_", "");
-            StructureType structure;
-            if (structureName.equals("village")) structure = StructureType.VILLAGE;
-            else if (structureName.equals("stronghold")) structure = StructureType.STRONGHOLD;
-            else if (structureName.equals("mineshaft")) structure = StructureType.MINESHAFT;
-            else if (structureName.equals("monument") || structureName.equals("oceanmonument")) structure = StructureType.OCEAN_MONUMENT;
-            else if (structureName.equals("mansion") || structureName.equals("woodlandmansion")) structure = StructureType.WOODLAND_MANSION;
-            else if (structureName.equals("deserttemple") || structureName.equals("desertpyramid")) structure = StructureType.DESERT_PYRAMID;
-            else if (structureName.equals("junglet temple") || structureName.equals("jungletemple") || structureName.equals("junglepyramid")) structure = StructureType.JUNGLE_PYRAMID;
-            else if (structureName.equals("swamphut")) structure = StructureType.SWAMP_HUT;
-            else if (structureName.equals("igloo")) structure = StructureType.IGLOO;
-            else if (structureName.equals("netherfortress")) structure = StructureType.NETHER_FORTRESS;
-            else if (structureName.equals("endcity")) structure = StructureType.END_CITY;
+            String input = args[0].toLowerCase().replace("-", "").replace("_", "");
+            String structureName;
+            if (input.equals("village")) structureName = "Village";
+            else if (input.equals("stronghold")) structureName = "Stronghold";
+            else if (input.equals("mineshaft")) structureName = "Mineshaft";
+            else if (input.equals("monument") || input.equals("oceanmonument")) structureName = "Monument";
+            else if (input.equals("mansion") || input.equals("woodlandmansion")) structureName = "Mansion";
+            else if (input.equals("temple") || input.equals("deserttemple") || input.equals("desertpyramid")
+                    || input.equals("junglet temple") || input.equals("jungletemple") || input.equals("junglepyramid")
+                    || input.equals("swamphut") || input.equals("igloo")) structureName = "Temple";
+            else if (input.equals("fortress") || input.equals("netherfortress")) structureName = "Fortress";
+            else if (input.equals("endcity")) structureName = "EndCity";
             else {
                 player.sendMessage(ChatColor.RED + "Unknown structure. Use /dlocate to see supported structures.");
                 return true;
             }
-            Location found = player.getWorld().locateNearestStructure(player.getLocation(), structure, true);
-            if (found == null) {
-                player.sendMessage(ChatColor.RED + "No nearby " + args[0] + " was found in this world.");
-            } else {
-                player.sendMessage(ChatColor.GOLD + "Nearest " + args[0] + ": " + ChatColor.WHITE
-                        + found.getBlockX() + ", " + found.getBlockY() + ", " + found.getBlockZ());
-                player.sendMessage(ChatColor.GRAY + "Distance: " + Math.round(player.getLocation().distance(found)) + " blocks");
+            try {
+                Object craftWorld = player.getWorld();
+                Object nmsWorld = craftWorld.getClass().getMethod("getHandle").invoke(craftWorld);
+                Class<?> blockPosClass = Class.forName("net.minecraft.server.v1_12_R1.BlockPosition");
+                Object blockPos = blockPosClass.getConstructor(int.class, int.class, int.class)
+                        .newInstance(player.getLocation().getBlockX(), player.getLocation().getBlockY(), player.getLocation().getBlockZ());
+                java.lang.reflect.Method locateMethod = nmsWorld.getClass().getMethod("findNearestStructure", String.class, blockPosClass, boolean.class);
+                Object result = locateMethod.invoke(nmsWorld, structureName, blockPos, false);
+                if (result == null) {
+                    player.sendMessage(ChatColor.RED + "No nearby " + args[0] + " was found in this world.");
+                } else {
+                    int x = (Integer) result.getClass().getMethod("getX").invoke(result);
+                    int y = (Integer) result.getClass().getMethod("getY").invoke(result);
+                    int z = (Integer) result.getClass().getMethod("getZ").invoke(result);
+                    Location found = new Location(player.getWorld(), x, y, z);
+                    player.sendMessage(ChatColor.GOLD + "Nearest " + args[0] + ": " + ChatColor.WHITE + x + ", " + y + ", " + z);
+                    player.sendMessage(ChatColor.GRAY + "Distance: " + Math.round(player.getLocation().distance(found)) + " blocks");
+                }
+            } catch (Exception ex) {
+                player.sendMessage(ChatColor.RED + "Structure search failed: " + ex.getClass().getSimpleName() + " - " + ex.getMessage());
+                plugin.getLogger().warning("dlocate error: " + ex.toString());
             }
         } else if (cmd.equals("dsummon")) {
             if (args.length < 1) {
