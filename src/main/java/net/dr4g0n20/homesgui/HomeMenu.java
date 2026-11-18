@@ -117,6 +117,11 @@ public final class HomeMenu implements CommandExecutor, Listener {
             return;
         }
 
+        if (!event.getClick().isLeftClick()) {
+            player.sendMessage(ChatColor.YELLOW + "Home management options will be added soon.");
+            return;
+        }
+
         org.bukkit.Location destination = storage.getHome(player, homeNumber);
         if (destination == null) {
             player.sendMessage(ChatColor.RED + "That home is in a world that is not loaded.");
