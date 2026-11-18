@@ -1,5 +1,6 @@
 package net.dr4g0n20.homesgui;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -23,10 +24,12 @@ public final class HomeMenu implements CommandExecutor, Listener {
     private static final int[] HOME_SLOTS = {10, 11, 12, 13, 14, 15, 16};
 
     private final HomesGUI plugin;
+    private final HomeStorage storage;
     private final Set<Integer> homeSlots = new HashSet<Integer>();
 
     public HomeMenu(HomesGUI plugin) {
         this.plugin = plugin;
+        this.storage = new HomeStorage(plugin);
         for (int slot : HOME_SLOTS) {
             homeSlots.add(slot);
         }
@@ -55,11 +58,19 @@ public final class HomeMenu implements CommandExecutor, Listener {
 
         for (int i = 0; i < HOME_SLOTS.length; i++) {
             int homeNumber = i + 1;
+            boolean saved = storage.hasHome(player, homeNumber);
+            String homeName = storage.getHomeName(player, homeNumber);
+
             ItemStack bed = createItem(Material.BED, 1, (short) 0,
-                    ChatColor.GREEN + "Home " + homeNumber,
-                    Arrays.asList(
-                            ChatColor.GRAY + "Currently empty",
-                            ChatColor.YELLOW + "Click to save your location"));
+                    ChatColor.GREEN + homeName,
+                    saved
+                            ? Arrays.asList(
+                                    ChatColor.GRAY + "Saved home",
+                                    ChatColor.YELLOW + "Left-click to teleport (coming soon)",
+                                    ChatColor.YELLOW + "Right-click to overwrite (coming soon)")
+                            : Arrays.asList(
+                                    ChatColor.GRAY + "Currently empty",
+                                    ChatColor.YELLOW + "Click to save your location"));
             inventory.setItem(HOME_SLOTS[i], bed);
         }
 
@@ -91,8 +102,20 @@ public final class HomeMenu implements CommandExecutor, Listener {
         Player player = (Player) event.getWhoClicked();
         int homeNumber = slot - HOME_SLOTS[0] + 1;
 
-        player.sendMessage(ChatColor.YELLOW + "Home " + homeNumber
-                + ChatColor.GRAY + " saving functionality is coming next!");
+        if (storage.hasHome(player, homeNumber)) {
+            player.sendMessage(ChatColor.YELLOW + "That home is already saved. Teleporting will be implemented next.");
+            return;
+        }
+
+        try {
+            storage.saveHome(player, homeNumber, player.getLocation());
+            player.sendMessage(ChatColor.GREEN + "Saved Home " + homeNumber + "!");
+            openMenu(player);
+        } catch (IOException exception) {
+            player.sendMessage(ChatColor.RED + "Your home could not be saved. Please try again.");
+            plugin.getLogger().severe("Failed to save home for " + player.getName() + ": "
+                    + exception.getMessage());
+        }
     }
 
     private ItemStack createItem(Material material, int amount, short durability,
