@@ -139,13 +139,13 @@ public final class HomeTeleportManager implements Listener {
     private void finishTeleport(Player player, Location destination, String homeName) {
         Location from = player.getLocation();
         from.getWorld().spawnParticle(Particle.PORTAL, from, 40, 0.5, 1.0, 0.5, 0.2);
-        player.playSound(from, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+        player.playSound(from, Sound.ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
         player.teleport(destination);
 
         Location to = player.getLocation();
         to.getWorld().spawnParticle(Particle.PORTAL, to, 40, 0.5, 1.0, 0.5, 0.2);
-        player.playSound(to, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+        player.playSound(to, Sound.ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
         int cooldown = Math.max(0, plugin.getConfig().getInt("teleport-cooldown", 30));
         if (cooldown > 0) {
