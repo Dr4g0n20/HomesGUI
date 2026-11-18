@@ -5,6 +5,7 @@ import java.util.Set;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -21,12 +22,18 @@ public final class OwnerCommands implements CommandExecutor, Listener {
     private final HomesGUI plugin;
     private final Set<String> noFall = new HashSet<String>();
     private final Set<String> fireResistance = new HashSet<String>();
+    private final Set<String> flying = new HashSet<String>();
 
     public OwnerCommands(HomesGUI plugin) { this.plugin = plugin; }
 
+    private String[] commandNames() {
+        return new String[] {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres",
+            "dseed", "dlevels", "dlocate", "dsummon", "dfly", "drepair", "dinfo",
+            "dextinguish", "dspawn", "dweather", "dday", "dnight", "dhelp"};
+    }
+
     public void hideCommandsFromHelp() {
-        String[] names = {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels", "dlocate", "dsummon"};
-        for (String name : names) {
+        for (String name : commandNames()) {
             plugin.getServer().getHelpMap().getHelpTopics().remove("/" + name);
             plugin.getServer().getHelpMap().getHelpTopics().remove("/homesgui:" + name);
         }
@@ -35,10 +42,9 @@ public final class OwnerCommands implements CommandExecutor, Listener {
     @EventHandler
     public void onTabComplete(TabCompleteEvent event) {
         if (!(event.getSender() instanceof Player)) return;
-        String[] names = {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels", "dlocate", "dsummon"};
         event.getCompletions().removeIf(completion -> {
             String normalized = completion.toLowerCase();
-            for (String name : names) {
+            for (String name : commandNames()) {
                 if (normalized.equals("/" + name) || normalized.equals("/homesgui:" + name)) return true;
             }
             return false;
@@ -50,13 +56,44 @@ public final class OwnerCommands implements CommandExecutor, Listener {
                 .equalsIgnoreCase(plugin.getConfig().getString("owner", "Dr4g0n20"));
     }
 
+    private void repairItem(ItemStack item) {
+        if (item != null && item.getType() != Material.AIR && item.getType().getMaxDurability() > 0) {
+            item.setDurability((short) 0);
+        }
+    }
+
+    private void showHelp(Player player) {
+        player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "----- HomesGUI Owner Commands -----");
+        player.sendMessage(ChatColor.YELLOW + "/dheal" + ChatColor.GRAY + " - Restore health");
+        player.sendMessage(ChatColor.YELLOW + "/dfeed" + ChatColor.GRAY + " - Restore hunger");
+        player.sendMessage(ChatColor.YELLOW + "/dcoords <player>" + ChatColor.GRAY + " - View player coordinates");
+        player.sendMessage(ChatColor.YELLOW + "/dgive <item> [amount]" + ChatColor.GRAY + " - Give yourself items");
+        player.sendMessage(ChatColor.YELLOW + "/dnofall" + ChatColor.GRAY + " - Toggle fall damage");
+        player.sendMessage(ChatColor.YELLOW + "/dfireres" + ChatColor.GRAY + " - Toggle fire resistance");
+        player.sendMessage(ChatColor.YELLOW + "/dseed" + ChatColor.GRAY + " - View world seed");
+        player.sendMessage(ChatColor.YELLOW + "/dlevels <amount>" + ChatColor.GRAY + " - Add XP levels");
+        player.sendMessage(ChatColor.YELLOW + "/dlocate <structure>" + ChatColor.GRAY + " - Locate a structure");
+        player.sendMessage(ChatColor.YELLOW + "/dsummon <entity> [x] [y] [z] [dataTag]" + ChatColor.GRAY + " - Summon an entity");
+        player.sendMessage(ChatColor.YELLOW + "/dfly" + ChatColor.GRAY + " - Toggle flight");
+        player.sendMessage(ChatColor.YELLOW + "/drepair [all]" + ChatColor.GRAY + " - Repair held item or inventory");
+        player.sendMessage(ChatColor.YELLOW + "/dinfo" + ChatColor.GRAY + " - Display your player information");
+        player.sendMessage(ChatColor.YELLOW + "/dextinguish" + ChatColor.GRAY + " - Extinguish yourself");
+        player.sendMessage(ChatColor.YELLOW + "/dspawn" + ChatColor.GRAY + " - Teleport to world spawn");
+        player.sendMessage(ChatColor.YELLOW + "/dweather <clear|rain|storm>" + ChatColor.GRAY + " - Change weather");
+        player.sendMessage(ChatColor.YELLOW + "/dday" + ChatColor.GRAY + " - Set daytime");
+        player.sendMessage(ChatColor.YELLOW + "/dnight" + ChatColor.GRAY + " - Set nighttime");
+        player.sendMessage(ChatColor.YELLOW + "/dhelp" + ChatColor.GRAY + " - Show this list");
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!isOwner(sender)) { sender.sendMessage(ChatColor.RED + "Unknown command."); return true; }
         Player player = (Player) sender;
         String cmd = command.getName().toLowerCase();
 
-        if (cmd.equals("dheal")) {
+        if (cmd.equals("dhelp")) {
+            showHelp(player);
+        } else if (cmd.equals("dheal")) {
             player.setHealth(player.getMaxHealth()); player.setFireTicks(0);
             player.sendMessage(ChatColor.GREEN + "You have been healed.");
         } else if (cmd.equals("dfeed")) {
@@ -82,8 +119,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
                 int stack = Math.min(remaining, material.getMaxStackSize());
                 ItemStack item = new ItemStack(material, stack);
                 remaining -= stack;
-                int leftover = player.getInventory().addItem(item).values().stream()
-                        .mapToInt(ItemStack::getAmount).sum();
+                int leftover = player.getInventory().addItem(item).values().stream().mapToInt(ItemStack::getAmount).sum();
                 remaining += leftover;
                 if (leftover > 0) break;
             }
@@ -125,6 +161,77 @@ public final class OwnerCommands implements CommandExecutor, Listener {
                 player.setLevel(player.getLevel() + levels);
                 player.sendMessage(ChatColor.GREEN + "Added " + levels + " experience levels.");
             } catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Amount must be a number."); }
+        } else if (cmd.equals("dfly")) {
+            if (flying.remove(player.getName())) {
+                player.setFlying(false);
+                player.setAllowFlight(false);
+                player.sendMessage(ChatColor.YELLOW + "Flight disabled.");
+            } else {
+                flying.add(player.getName());
+                player.setAllowFlight(true);
+                player.setFlying(true);
+                player.sendMessage(ChatColor.GREEN + "Flight enabled.");
+            }
+        } else if (cmd.equals("drepair")) {
+            if (args.length == 0) {
+                ItemStack held = player.getItemInHand();
+                if (held == null || held.getType() == Material.AIR || held.getType().getMaxDurability() == 0) {
+                    player.sendMessage(ChatColor.RED + "Hold a repairable item first.");
+                } else {
+                    repairItem(held);
+                    player.sendMessage(ChatColor.GREEN + "Your held item has been repaired.");
+                }
+            } else if (args.length == 1 && args[0].equalsIgnoreCase("all")) {
+                for (ItemStack item : player.getInventory().getContents()) repairItem(item);
+                for (ItemStack item : player.getInventory().getArmorContents()) repairItem(item);
+                player.sendMessage(ChatColor.GREEN + "All repairable items in your inventory and armour have been repaired.");
+            } else {
+                player.sendMessage(ChatColor.YELLOW + "Usage: /drepair [all]");
+            }
+        } else if (cmd.equals("dinfo")) {
+            World world = player.getWorld();
+            player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "--- Player Information ---");
+            player.sendMessage(ChatColor.YELLOW + "World: " + ChatColor.WHITE + world.getName());
+            player.sendMessage(ChatColor.YELLOW + "Coordinates: " + ChatColor.WHITE + player.getLocation().getBlockX()
+                    + ", " + player.getLocation().getBlockY() + ", " + player.getLocation().getBlockZ());
+            player.sendMessage(ChatColor.YELLOW + "Health: " + ChatColor.WHITE + String.format("%.1f/%.1f", player.getHealth(), player.getMaxHealth()));
+            player.sendMessage(ChatColor.YELLOW + "Hunger: " + ChatColor.WHITE + player.getFoodLevel() + "/20");
+            player.sendMessage(ChatColor.YELLOW + "XP: " + ChatColor.WHITE + player.getLevel() + " levels (" + player.getExp() + " progress)");
+            player.sendMessage(ChatColor.YELLOW + "Gamemode: " + ChatColor.WHITE + player.getGameMode().name());
+            if (player.getActivePotionEffects().isEmpty()) player.sendMessage(ChatColor.YELLOW + "Effects: " + ChatColor.WHITE + "None");
+            else {
+                player.sendMessage(ChatColor.YELLOW + "Effects:");
+                for (PotionEffect effect : player.getActivePotionEffects()) {
+                    player.sendMessage(ChatColor.GRAY + "- " + effect.getType().getName() + " " + (effect.getAmplifier() + 1)
+                            + " (" + effect.getDuration() / 20 + "s)");
+                }
+            }
+        } else if (cmd.equals("dextinguish")) {
+            player.setFireTicks(0);
+            player.sendMessage(ChatColor.GREEN + "You have been extinguished.");
+        } else if (cmd.equals("dspawn")) {
+            player.teleport(player.getWorld().getSpawnLocation());
+            player.sendMessage(ChatColor.GREEN + "Teleported to this world's spawn.");
+        } else if (cmd.equals("dweather")) {
+            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: /dweather <clear|rain|storm>"); return true; }
+            String weather = args[0].toLowerCase();
+            World world = player.getWorld();
+            if (weather.equals("clear")) {
+                world.setStorm(false); world.setThundering(false); world.setWeatherDuration(12000);
+                player.sendMessage(ChatColor.GREEN + "Weather cleared.");
+            } else if (weather.equals("rain")) {
+                world.setStorm(true); world.setThundering(false); world.setWeatherDuration(12000);
+                player.sendMessage(ChatColor.GREEN + "Rain started.");
+            } else if (weather.equals("storm")) {
+                world.setStorm(true); world.setThundering(true); world.setWeatherDuration(12000); world.setThunderDuration(12000);
+                player.sendMessage(ChatColor.GREEN + "Thunderstorm started.");
+            } else player.sendMessage(ChatColor.YELLOW + "Usage: /dweather <clear|rain|storm>");
+        } else if (cmd.equals("dday")) {
+            player.getWorld().setTime(1000L);
+            player.sendMessage(ChatColor.GREEN + "Time set to day.");
+        } else if (cmd.equals("dnight")) {
+            player.getWorld().setTime(13000L);
+            player.sendMessage(ChatColor.GREEN + "Time set to night.");
         }
         return true;
     }
