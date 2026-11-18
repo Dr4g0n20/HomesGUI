@@ -161,13 +161,17 @@ public final class OwnerCommands implements CommandExecutor, Listener {
                 player.sendMessage(ChatColor.GRAY + "Examples: Village, Stronghold, Monument, Mansion");
                 return true;
             }
-            player.performCommand("locate " + args[0]);
+            boolean dispatched = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "locate " + String.join(" ", args));
+            if (dispatched) player.sendMessage(ChatColor.GREEN + "Structure locate command sent through the server console. Check console for the coordinates.");
+            else player.sendMessage(ChatColor.RED + "The server could not execute the locate command.");
         } else if (cmd.equals("dsummon")) {
             if (args.length < 1) {
                 player.sendMessage(ChatColor.YELLOW + "Usage: /dsummon <entity> [x] [y] [z] [dataTag]");
                 return true;
             }
-            player.performCommand("summon " + String.join(" ", args));
+            boolean dispatched = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "summon " + String.join(" ", args));
+            if (dispatched) player.sendMessage(ChatColor.GREEN + "Summon command sent through the server console.");
+            else player.sendMessage(ChatColor.RED + "The server could not execute the summon command.");
         } else if (cmd.equals("dlevels")) {
             if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: /dlevels <amount>"); return true; }
             try {
