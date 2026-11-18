@@ -25,11 +25,13 @@ public final class HomeMenu implements CommandExecutor, Listener {
 
     private final HomesGUI plugin;
     private final HomeStorage storage;
+    private final HomeTeleportManager teleportManager;
     private final Set<Integer> homeSlots = new HashSet<Integer>();
 
-    public HomeMenu(HomesGUI plugin) {
+    public HomeMenu(HomesGUI plugin, HomeTeleportManager teleportManager) {
         this.plugin = plugin;
         this.storage = new HomeStorage(plugin);
+        this.teleportManager = teleportManager;
         for (int slot : HOME_SLOTS) {
             homeSlots.add(slot);
         }
@@ -66,8 +68,8 @@ public final class HomeMenu implements CommandExecutor, Listener {
                     saved
                             ? Arrays.asList(
                                     ChatColor.GRAY + "Saved home",
-                                    ChatColor.YELLOW + "Left-click to teleport (coming soon)",
-                                    ChatColor.YELLOW + "Right-click to overwrite (coming soon)")
+                                    ChatColor.YELLOW + "Left-click to teleport",
+                                    ChatColor.YELLOW + "Right-click to overwrite")
                             : Arrays.asList(
                                     ChatColor.GRAY + "Currently empty",
                                     ChatColor.YELLOW + "Click to save your location"));
@@ -102,20 +104,28 @@ public final class HomeMenu implements CommandExecutor, Listener {
         Player player = (Player) event.getWhoClicked();
         int homeNumber = slot - HOME_SLOTS[0] + 1;
 
-        if (storage.hasHome(player, homeNumber)) {
-            player.sendMessage(ChatColor.YELLOW + "That home is already saved. Teleporting will be implemented next.");
+        if (!storage.hasHome(player, homeNumber)) {
+            try {
+                storage.saveHome(player, homeNumber, player.getLocation());
+                player.sendMessage(ChatColor.GREEN + "Saved Home " + homeNumber + "!");
+                openMenu(player);
+            } catch (IOException exception) {
+                player.sendMessage(ChatColor.RED + "Your home could not be saved. Please try again.");
+                plugin.getLogger().severe("Failed to save home for " + player.getName() + ": "
+                        + exception.getMessage());
+            }
             return;
         }
 
-        try {
-            storage.saveHome(player, homeNumber, player.getLocation());
-            player.sendMessage(ChatColor.GREEN + "Saved Home " + homeNumber + "!");
-            openMenu(player);
-        } catch (IOException exception) {
-            player.sendMessage(ChatColor.RED + "Your home could not be saved. Please try again.");
-            plugin.getLogger().severe("Failed to save home for " + player.getName() + ": "
-                    + exception.getMessage());
+        org.bukkit.Location destination = storage.getHome(player, homeNumber);
+        if (destination == null) {
+            player.sendMessage(ChatColor.RED + "That home is in a world that is not loaded.");
+            return;
         }
+
+        String homeName = storage.getHomeName(player, homeNumber);
+        player.closeInventory();
+        teleportManager.startTeleport(player, destination, homeName);
     }
 
     private ItemStack createItem(Material material, int amount, short durability,
