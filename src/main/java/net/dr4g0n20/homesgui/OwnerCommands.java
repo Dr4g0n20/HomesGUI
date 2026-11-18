@@ -15,6 +15,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.server.TabCompleteEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryType;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.Location;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -23,13 +27,14 @@ public final class OwnerCommands implements CommandExecutor, Listener {
     private final Set<String> noFall = new HashSet<String>();
     private final Set<String> fireResistance = new HashSet<String>();
     private final Set<String> flying = new HashSet<String>();
+    private final java.util.Map<String, Location> lastLocations = new java.util.HashMap<String, Location>();
 
     public OwnerCommands(HomesGUI plugin) { this.plugin = plugin; }
 
     private String[] commandNames() {
         return new String[] {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres",
             "dseed", "dlevels", "dlocate", "dsummon", "dfly", "drepair", "dinfo",
-            "dextinguish", "dspawn", "dweather", "dday", "dnight", "dhelp"};
+            "dextinguish", "dspawn", "dweather", "dday", "dnight", "dhelp", "denderchest", "dworkbench", "danvil", "dback", "dtime", "dchunk", "ditem", "drename", "dlore", "dclear"};
     }
 
     public void hideCommandsFromHelp() {
@@ -83,6 +88,16 @@ public final class OwnerCommands implements CommandExecutor, Listener {
         player.sendMessage(ChatColor.YELLOW + "/dday" + ChatColor.GRAY + " - Set daytime");
         player.sendMessage(ChatColor.YELLOW + "/dnight" + ChatColor.GRAY + " - Set nighttime");
         player.sendMessage(ChatColor.YELLOW + "/dhelp" + ChatColor.GRAY + " - Show this list");
+        player.sendMessage(ChatColor.YELLOW + "/denderchest" + ChatColor.GRAY + " - Open your Ender Chest");
+        player.sendMessage(ChatColor.YELLOW + "/dworkbench" + ChatColor.GRAY + " - Open a crafting table");
+        player.sendMessage(ChatColor.YELLOW + "/danvil" + ChatColor.GRAY + " - Open an anvil");
+        player.sendMessage(ChatColor.YELLOW + "/dback" + ChatColor.GRAY + " - Return to your previous location");
+        player.sendMessage(ChatColor.YELLOW + "/dtime <day|noon|night|midnight|ticks>" + ChatColor.GRAY + " - Set world time");
+        player.sendMessage(ChatColor.YELLOW + "/dchunk" + ChatColor.GRAY + " - Display current chunk");
+        player.sendMessage(ChatColor.YELLOW + "/ditem" + ChatColor.GRAY + " - Display held item information");
+        player.sendMessage(ChatColor.YELLOW + "/drename <name>" + ChatColor.GRAY + " - Rename held item");
+        player.sendMessage(ChatColor.YELLOW + "/dlore <text>" + ChatColor.GRAY + " - Add lore to held item");
+        player.sendMessage(ChatColor.YELLOW + "/dclear [item]" + ChatColor.GRAY + " - Clear inventory or remove an item");
     }
 
     @Override
