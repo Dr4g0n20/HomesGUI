@@ -111,7 +111,7 @@ public final class HomeTeleportManager implements Listener {
         }
     }
 
-    private boolean isUnsafe(Location location) {
+    public boolean isUnsafe(Location location) {
         if (location == null || location.getWorld() == null) {
             return true;
         }
