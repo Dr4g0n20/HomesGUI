@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.StructureType;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -16,7 +17,7 @@ import org.bukkit.event.server.TabCompleteEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryType;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.Location;
 import org.bukkit.potion.PotionEffect;
@@ -158,12 +159,34 @@ public final class OwnerCommands implements CommandExecutor, Listener {
         } else if (cmd.equals("dlocate")) {
             if (args.length != 1) {
                 player.sendMessage(ChatColor.YELLOW + "Usage: /dlocate <structure>");
-                player.sendMessage(ChatColor.GRAY + "Examples: Village, Stronghold, Monument, Mansion");
+                player.sendMessage(ChatColor.GRAY + "Structures: Village, Stronghold, Mineshaft, Monument, Mansion, DesertTemple, JungleTemple, SwampHut, Igloo, NetherFortress, EndCity");
                 return true;
             }
-            boolean dispatched = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "locate " + String.join(" ", args));
-            if (dispatched) player.sendMessage(ChatColor.GREEN + "Structure locate command sent through the server console. Check console for the coordinates.");
-            else player.sendMessage(ChatColor.RED + "The server could not execute the locate command.");
+            String structureName = args[0].toLowerCase().replace("-", "").replace("_", "");
+            StructureType structure;
+            if (structureName.equals("village")) structure = StructureType.VILLAGE;
+            else if (structureName.equals("stronghold")) structure = StructureType.STRONGHOLD;
+            else if (structureName.equals("mineshaft")) structure = StructureType.MINESHAFT;
+            else if (structureName.equals("monument") || structureName.equals("oceanmonument")) structure = StructureType.OCEAN_MONUMENT;
+            else if (structureName.equals("mansion") || structureName.equals("woodlandmansion")) structure = StructureType.WOODLAND_MANSION;
+            else if (structureName.equals("deserttemple") || structureName.equals("desertpyramid")) structure = StructureType.DESERT_PYRAMID;
+            else if (structureName.equals("junglet temple") || structureName.equals("jungletemple") || structureName.equals("junglepyramid")) structure = StructureType.JUNGLE_PYRAMID;
+            else if (structureName.equals("swamphut")) structure = StructureType.SWAMP_HUT;
+            else if (structureName.equals("igloo")) structure = StructureType.IGLOO;
+            else if (structureName.equals("netherfortress")) structure = StructureType.NETHER_FORTRESS;
+            else if (structureName.equals("endcity")) structure = StructureType.END_CITY;
+            else {
+                player.sendMessage(ChatColor.RED + "Unknown structure. Use /dlocate to see supported structures.");
+                return true;
+            }
+            Location found = player.getWorld().locateNearestStructure(player.getLocation(), structure, true);
+            if (found == null) {
+                player.sendMessage(ChatColor.RED + "No nearby " + args[0] + " was found in this world.");
+            } else {
+                player.sendMessage(ChatColor.GOLD + "Nearest " + args[0] + ": " + ChatColor.WHITE
+                        + found.getBlockX() + ", " + found.getBlockY() + ", " + found.getBlockZ());
+                player.sendMessage(ChatColor.GRAY + "Distance: " + Math.round(player.getLocation().distance(found)) + " blocks");
+            }
         } else if (cmd.equals("dsummon")) {
             if (args.length < 1) {
                 player.sendMessage(ChatColor.YELLOW + "Usage: /dsummon <entity> [x] [y] [z] [dataTag]");
