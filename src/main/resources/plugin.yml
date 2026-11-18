@@ -1,0 +1,12 @@
+name: HomesGUI
+version: 0.1.0
+main: net.dr4g0n20.homesgui.HomesGUI
+author: Dr4g0n20
+description: A configurable homes GUI plugin for Minecraft 1.12.2
+commands:
+  home:
+    description: Opens your homes menu.
+    usage: /home
+  homes:
+    description: Opens your homes menu.
+    usage: /homes
