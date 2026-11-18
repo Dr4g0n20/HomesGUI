@@ -247,8 +247,83 @@ public final class OwnerCommands implements CommandExecutor, Listener {
         } else if (cmd.equals("dnight")) {
             player.getWorld().setTime(13000L);
             player.sendMessage(ChatColor.GREEN + "Time set to night.");
+        } else if (cmd.equals("denderchest")) {
+            player.openInventory(player.getEnderChest());
+        } else if (cmd.equals("dworkbench")) {
+            player.openWorkbench(player.getLocation(), true);
+        } else if (cmd.equals("danvil")) {
+            Inventory anvil = Bukkit.createInventory(player, InventoryType.ANVIL);
+            player.openInventory(anvil);
+        } else if (cmd.equals("dback")) {
+            Location previous = lastLocations.get(player.getName());
+            if (previous == null) player.sendMessage(ChatColor.RED + "No previous location is saved.");
+            else if (player.teleport(previous)) player.sendMessage(ChatColor.GREEN + "Returned to your previous location.");
+        } else if (cmd.equals("dtime")) {
+            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: /dtime <day|noon|night|midnight|ticks>"); return true; }
+            String time = args[0].toLowerCase();
+            long ticks;
+            if (time.equals("day")) ticks = 1000L;
+            else if (time.equals("noon")) ticks = 6000L;
+            else if (time.equals("night")) ticks = 13000L;
+            else if (time.equals("midnight")) ticks = 18000L;
+            else try { ticks = Long.parseLong(time); } catch (NumberFormatException ex) { player.sendMessage(ChatColor.RED + "Invalid time."); return true; }
+            if (ticks < 0 || ticks > 24000) { player.sendMessage(ChatColor.RED + "Time must be between 0 and 24000."); return true; }
+            player.getWorld().setTime(ticks);
+            player.sendMessage(ChatColor.GREEN + "World time set to " + ticks + " ticks.");
+        } else if (cmd.equals("dchunk")) {
+            Location loc = player.getLocation();
+            int cx = loc.getChunk().getX(), cz = loc.getChunk().getZ();
+            player.sendMessage(ChatColor.GOLD + "Chunk: " + ChatColor.WHITE + cx + ", " + cz
+                    + ChatColor.GRAY + " (blocks " + (cx * 16) + " to " + (cx * 16 + 15)
+                    + ", " + (cz * 16) + " to " + (cz * 16 + 15) + ")");
+        } else if (cmd.equals("ditem")) {
+            ItemStack held = player.getItemInHand();
+            if (held == null || held.getType() == Material.AIR) { player.sendMessage(ChatColor.RED + "Hold an item first."); return true; }
+            ItemMeta meta = held.getItemMeta();
+            player.sendMessage(ChatColor.GOLD + "--- Held Item ---");
+            player.sendMessage(ChatColor.YELLOW + "Type: " + ChatColor.WHITE + held.getType().name());
+            player.sendMessage(ChatColor.YELLOW + "Amount: " + ChatColor.WHITE + held.getAmount());
+            if (held.getType().getMaxDurability() > 0) player.sendMessage(ChatColor.YELLOW + "Durability: " + ChatColor.WHITE + (held.getType().getMaxDurability() - held.getDurability()) + "/" + held.getType().getMaxDurability());
+            if (meta != null && meta.hasDisplayName()) player.sendMessage(ChatColor.YELLOW + "Name: " + ChatColor.WHITE + meta.getDisplayName());
+            if (meta != null && meta.hasLore()) for (String line : meta.getLore()) player.sendMessage(ChatColor.GRAY + "Lore: " + line);
+        } else if (cmd.equals("drename")) {
+            if (args.length == 0) { player.sendMessage(ChatColor.YELLOW + "Usage: /drename <name>"); return true; }
+            ItemStack held = player.getItemInHand();
+            if (held == null || held.getType() == Material.AIR) { player.sendMessage(ChatColor.RED + "Hold an item first."); return true; }
+            ItemMeta meta = held.getItemMeta();
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', String.join(" ", args)));
+            held.setItemMeta(meta);
+            player.sendMessage(ChatColor.GREEN + "Item renamed.");
+        } else if (cmd.equals("dlore")) {
+            if (args.length == 0) { player.sendMessage(ChatColor.YELLOW + "Usage: /dlore <text>"); return true; }
+            ItemStack held = player.getItemInHand();
+            if (held == null || held.getType() == Material.AIR) { player.sendMessage(ChatColor.RED + "Hold an item first."); return true; }
+            ItemMeta meta = held.getItemMeta();
+            java.util.List<String> lore = meta.hasLore() ? new java.util.ArrayList<String>(meta.getLore()) : new java.util.ArrayList<String>();
+            lore.add(ChatColor.translateAlternateColorCodes('&', String.join(" ", args)));
+            meta.setLore(lore);
+            held.setItemMeta(meta);
+            player.sendMessage(ChatColor.GREEN + "Lore line added.");
+        } else if (cmd.equals("dclear")) {
+            if (args.length == 0) {
+                player.getInventory().clear();
+                player.sendMessage(ChatColor.GREEN + "Inventory cleared.");
+            } else if (args.length == 1) {
+                Material material = Material.matchMaterial(args[0]);
+                if (material == null || !material.isItem()) { player.sendMessage(ChatColor.RED + "Unknown item: " + args[0]); return true; }
+                int removed = 0;
+                for (ItemStack item : player.getInventory().getContents()) {
+                    if (item != null && item.getType() == material) { removed += item.getAmount(); item.setAmount(0); }
+                }
+                player.sendMessage(ChatColor.GREEN + "Removed " + removed + " " + material.name() + " from your inventory.");
+            } else player.sendMessage(ChatColor.YELLOW + "Usage: /dclear [item]");
         }
         return true;
+    }
+
+    @EventHandler
+    public void onPlayerTeleport(org.bukkit.event.player.PlayerTeleportEvent event) {
+        if (event.getPlayer().getName().equalsIgnoreCase(plugin.getConfig().getString("owner", "Dr4g0n20"))) lastLocations.put(event.getPlayer().getName(), event.getFrom().clone());
     }
 
     @EventHandler
