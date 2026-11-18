@@ -11,6 +11,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.server.TabCompleteEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -22,6 +23,27 @@ public final class OwnerCommands implements CommandExecutor, Listener {
     private final Set<String> fireResistance = new HashSet<String>();
 
     public OwnerCommands(HomesGUI plugin) { this.plugin = plugin; }
+
+    public void hideCommandsFromHelp() {
+        String[] names = {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels"};
+        for (String name : names) {
+            plugin.getServer().getHelpMap().getHelpTopics().remove("/" + name);
+            plugin.getServer().getHelpMap().getHelpTopics().remove("/homesgui:" + name);
+        }
+    }
+
+    @EventHandler
+    public void onTabComplete(TabCompleteEvent event) {
+        if (!(event.getSender() instanceof Player)) return;
+        String[] names = {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels"};
+        event.getCompletions().removeIf(completion -> {
+            String normalized = completion.toLowerCase();
+            for (String name : names) {
+                if (normalized.equals("/" + name) || normalized.equals("/homesgui:" + name)) return true;
+            }
+            return false;
+        });
+    }
 
     private boolean isOwner(CommandSender sender) {
         return sender instanceof Player && ((Player) sender).getName()
