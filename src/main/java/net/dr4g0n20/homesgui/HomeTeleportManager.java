@@ -119,7 +119,7 @@ public final class HomeTeleportManager implements Listener {
                 || material == Material.FIRE
                 || material == Material.CACTUS
                 || material == Material.MAGMA
-                || material == Material.SPIKE;
+;
     }
 
     private void finishTeleport(Player player, Location destination, String homeName) {
