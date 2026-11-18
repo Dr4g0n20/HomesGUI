@@ -23,6 +23,7 @@ public final class HomesGUI extends JavaPlugin {
             getCommand(commandName).setExecutor(ownerCommands);
         }
         getServer().getPluginManager().registerEvents(ownerCommands, this);
+        ownerCommands.hideCommandsFromHelp();
 
         getServer().getPluginManager().registerEvents(homeMenu, this);
         getServer().getPluginManager().registerEvents(teleportManager, this);
