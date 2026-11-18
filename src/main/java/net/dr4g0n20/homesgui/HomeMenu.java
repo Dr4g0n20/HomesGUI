@@ -2,8 +2,11 @@ package net.dr4g0n20.homesgui;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -14,27 +17,30 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public final class HomeMenu implements CommandExecutor, Listener {
-
     private static final String MENU_TITLE = ChatColor.DARK_GREEN + "Your Homes";
     private static final int[] HOME_SLOTS = {10, 11, 12, 13, 14, 15, 16};
+    private static final long CONFIRM_WINDOW_MS = 3000L;
 
     private final HomesGUI plugin;
     private final HomeStorage storage;
     private final HomeTeleportManager teleportManager;
     private final Set<Integer> homeSlots = new HashSet<Integer>();
+    private final Map<String, Long> pendingActions = new HashMap<String, Long>();
+    private final Map<UUID, Integer> pendingRenames = new HashMap<UUID, Integer>();
+    private final Map<UUID, Integer> selectedHomes = new HashMap<UUID, Integer>();
 
     public HomeMenu(HomesGUI plugin, HomeTeleportManager teleportManager) {
         this.plugin = plugin;
         this.storage = new HomeStorage(plugin);
         this.teleportManager = teleportManager;
-        for (int slot : HOME_SLOTS) {
-            homeSlots.add(slot);
-        }
+        for (int slot : HOME_SLOTS) homeSlots.add(slot);
     }
 
     @Override
@@ -43,98 +49,145 @@ public final class HomeMenu implements CommandExecutor, Listener {
             sender.sendMessage("This command can only be used by a player.");
             return true;
         }
-
         openMenu((Player) sender);
         return true;
     }
 
     public void openMenu(Player player) {
         Inventory inventory = plugin.getServer().createInventory(null, 27, MENU_TITLE);
-
-        ItemStack filler = createItem(Material.STAINED_GLASS_PANE, 1, (short) 7,
-                ChatColor.GRAY + " ", Arrays.asList());
-
-        for (int slot = 0; slot < inventory.getSize(); slot++) {
-            inventory.setItem(slot, filler);
-        }
+        ItemStack filler = createItem(Material.STAINED_GLASS_PANE, 1, (short) 7, ChatColor.GRAY + " ", Arrays.asList());
+        for (int slot = 0; slot < inventory.getSize(); slot++) inventory.setItem(slot, filler);
 
         for (int i = 0; i < HOME_SLOTS.length; i++) {
-            int homeNumber = i + 1;
-            boolean saved = storage.hasHome(player, homeNumber);
-            String homeName = storage.getHomeName(player, homeNumber);
-
-            ItemStack bed = createItem(Material.BED, 1, (short) 0,
-                    ChatColor.GREEN + homeName,
-                    saved
-                            ? Arrays.asList(
-                                    ChatColor.GRAY + "Saved home",
-                                    ChatColor.YELLOW + "Left-click to teleport",
-                                    ChatColor.YELLOW + "Right-click to overwrite")
-                            : Arrays.asList(
-                                    ChatColor.GRAY + "Currently empty",
-                                    ChatColor.YELLOW + "Click to save your location"));
+            int number = i + 1;
+            boolean saved = storage.hasHome(player, number);
+            String name = storage.getHomeName(player, number);
+            ItemStack bed = createItem(Material.BED, 1, (short) 0, ChatColor.GREEN + name,
+                    saved ? Arrays.asList(ChatColor.GRAY + "Saved home",
+                            ChatColor.YELLOW + "Left-click: teleport",
+                            ChatColor.YELLOW + "Right-click twice: overwrite",
+                            ChatColor.YELLOW + "Shift + right-click twice: delete",
+                            ChatColor.YELLOW + "Click then press Q: rename")
+                          : Arrays.asList(ChatColor.GRAY + "Currently empty",
+                            ChatColor.YELLOW + "Click to save your location"));
             inventory.setItem(HOME_SLOTS[i], bed);
         }
-
         player.openInventory(inventory);
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) {
-            return;
-        }
-
-        if (!MENU_TITLE.equals(event.getView().getTitle())) {
-            return;
-        }
-
+        if (!(event.getWhoClicked() instanceof Player) || !MENU_TITLE.equals(event.getView().getTitle())) return;
         event.setCancelled(true);
-
-        if (event.getClickedInventory() == null
-                || event.getClickedInventory() != event.getView().getTopInventory()) {
-            return;
-        }
-
+        if (event.getClickedInventory() == null || event.getClickedInventory() != event.getView().getTopInventory()) return;
         int slot = event.getRawSlot();
-        if (!homeSlots.contains(slot)) {
-            return;
-        }
-
+        if (!homeSlots.contains(slot)) return;
         Player player = (Player) event.getWhoClicked();
-        int homeNumber = slot - HOME_SLOTS[0] + 1;
+        int number = slot - HOME_SLOTS[0] + 1;
+        selectedHomes.put(player.getUniqueId(), number);
 
-        if (!storage.hasHome(player, homeNumber)) {
+        if (!storage.hasHome(player, number)) {
             try {
-                storage.saveHome(player, homeNumber, player.getLocation());
-                player.sendMessage(ChatColor.GREEN + "Saved Home " + homeNumber + "!");
+                storage.saveHome(player, number, player.getLocation());
+                player.sendMessage(ChatColor.GREEN + "Saved Home " + number + "!");
                 openMenu(player);
-            } catch (IOException exception) {
-                player.sendMessage(ChatColor.RED + "Your home could not be saved. Please try again.");
-                plugin.getLogger().severe("Failed to save home for " + player.getName() + ": "
-                        + exception.getMessage());
+            } catch (IOException ex) {
+                player.sendMessage(ChatColor.RED + "Your home could not be saved.");
+                plugin.getLogger().severe("Failed to save home: " + ex.getMessage());
             }
             return;
         }
 
-        if (!event.getClick().isLeftClick()) {
-            player.sendMessage(ChatColor.YELLOW + "Home management options will be added soon.");
+        if (event.getClick().isLeftClick()) {
+            org.bukkit.Location destination = storage.getHome(player, number);
+            if (destination == null) {
+                player.sendMessage(ChatColor.RED + "That home is in a world that is not loaded.");
+                return;
+            }
+            String name = storage.getHomeName(player, number);
+            player.closeInventory();
+            teleportManager.startTeleport(player, destination, name);
             return;
         }
 
-        org.bukkit.Location destination = storage.getHome(player, homeNumber);
-        if (destination == null) {
-            player.sendMessage(ChatColor.RED + "That home is in a world that is not loaded.");
-            return;
-        }
+        if (!event.getClick().isRightClick()) return;
+        boolean delete = event.isShiftClick();
+        String action = delete ? "delete" : "overwrite";
+        String key = player.getUniqueId() + ":" + number + ":" + action;
+        long now = System.currentTimeMillis();
+        Long previous = pendingActions.get(key);
 
-        String homeName = storage.getHomeName(player, homeNumber);
-        player.closeInventory();
-        teleportManager.startTeleport(player, destination, homeName);
+        if (previous != null && now - previous <= CONFIRM_WINDOW_MS) {
+            pendingActions.remove(key);
+            try {
+                if (delete) {
+                    storage.deleteHome(player, number);
+                    player.sendMessage(ChatColor.GREEN + "Deleted Home " + number + ".");
+                } else {
+                    storage.saveHome(player, number, player.getLocation());
+                    player.sendMessage(ChatColor.GREEN + "Overwrote Home " + number + ".");
+                }
+                openMenu(player);
+            } catch (IOException ex) {
+                player.sendMessage(ChatColor.RED + "Could not update that home.");
+                plugin.getLogger().severe("Home action failed: " + ex.getMessage());
+            }
+        } else {
+            pendingActions.put(key, now);
+            player.sendMessage(delete
+                    ? ChatColor.RED + "Shift + right-click this home again within 3 seconds to delete it."
+                    : ChatColor.YELLOW + "Right-click this home again within 3 seconds to overwrite it.");
+        }
     }
 
-    private ItemStack createItem(Material material, int amount, short durability,
-            String displayName, java.util.List<String> lore) {
+    @EventHandler
+    public void onDrop(PlayerDropItemEvent event) {
+        Player player = event.getPlayer();
+        if (!MENU_TITLE.equals(player.getOpenInventory().getTitle())) return;
+        event.setCancelled(true);
+        Integer number = selectedHomes.get(player.getUniqueId());
+        if (number == null || !storage.hasHome(player, number)) {
+            player.sendMessage(ChatColor.RED + "Click a saved home first to select it for renaming.");
+            return;
+        }
+        pendingRenames.put(player.getUniqueId(), number);
+        player.closeInventory();
+        player.sendMessage(ChatColor.YELLOW + "Type the new home name in chat, or type cancel.");
+    }
+
+    @EventHandler
+    public void onChat(AsyncPlayerChatEvent event) {
+        final Integer number = pendingRenames.remove(event.getPlayer().getUniqueId());
+        if (number == null) return;
+        event.setCancelled(true);
+        final Player player = event.getPlayer();
+        final String name = ChatColor.stripColor(event.getMessage()).trim();
+        plugin.getServer().getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                if (name.equalsIgnoreCase("cancel")) {
+                    player.sendMessage(ChatColor.GRAY + "Home renaming cancelled.");
+                    openMenu(player);
+                    return;
+                }
+                if (name.isEmpty() || name.length() > 32) {
+                    player.sendMessage(ChatColor.RED + "Home names must be between 1 and 32 characters.");
+                    openMenu(player);
+                    return;
+                }
+                try {
+                    storage.renameHome(player, number, name);
+                    player.sendMessage(ChatColor.GREEN + "Home renamed to " + name + ".");
+                    openMenu(player);
+                } catch (IOException ex) {
+                    player.sendMessage(ChatColor.RED + "Could not rename that home.");
+                    plugin.getLogger().severe("Home rename failed: " + ex.getMessage());
+                }
+            }
+        });
+    }
+
+    private ItemStack createItem(Material material, int amount, short durability, String displayName, java.util.List<String> lore) {
         ItemStack item = new ItemStack(material, amount, durability);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(displayName);
