@@ -61,8 +61,12 @@ public final class HomeMenu implements CommandExecutor, Listener {
             int number = i + 1;
             boolean saved = storage.hasHome(player, number);
             String name = storage.getHomeName(player, number);
-            ItemStack bed = createItem(Material.BED, 1, (short) 0, ChatColor.GREEN + name,
-                    saved ? Arrays.asList(ChatColor.GRAY + "Saved home",
+            org.bukkit.Location savedLocation = saved ? storage.getHome(player, number) : null;
+            boolean unsafe = saved && (savedLocation == null || teleportManager.isUnsafe(savedLocation));
+            short bedColor = saved ? (unsafe ? (short) 14 : (short) 13) : (short) 0;
+            String bedNameColor = saved ? (unsafe ? ChatColor.RED : ChatColor.GREEN) : ChatColor.WHITE;
+            ItemStack bed = createItem(Material.BED, 1, bedColor, bedNameColor + name,
+                    saved ? Arrays.asList(unsafe ? ChatColor.RED + "Unsafe home" : ChatColor.GREEN + "Safe home",
                             ChatColor.YELLOW + "Left-click: teleport",
                             ChatColor.YELLOW + "Right-click twice: overwrite",
                             ChatColor.YELLOW + "Shift + right-click twice: delete",
