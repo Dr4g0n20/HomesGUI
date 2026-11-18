@@ -58,3 +58,28 @@ commands:
   dhelp:
     description: Owner utility - show private owner command list.
 
+
+  denderchest:
+    description: Owner utility - open your Ender Chest.
+  dworkbench:
+    description: Owner utility - open a crafting table.
+  danvil:
+    description: Owner utility - open an anvil.
+  dback:
+    description: Owner utility - return to previous location.
+  dtime:
+    description: Owner utility - set world time.
+    usage: /dtime <day|noon|night|midnight|ticks>
+  dchunk:
+    description: Owner utility - show current chunk.
+  ditem:
+    description: Owner utility - inspect held item.
+  drename:
+    description: Owner utility - rename held item.
+    usage: /drename <name>
+  dlore:
+    description: Owner utility - add lore to held item.
+    usage: /dlore <text>
+  dclear:
+    description: Owner utility - clear inventory or remove item.
+    usage: /dclear [item]
