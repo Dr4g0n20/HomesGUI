@@ -9,8 +9,10 @@ import net.md_5.bungee.api.chat.TextComponent;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -23,6 +25,7 @@ public final class HomeTeleportManager implements Listener {
     private final HomesGUI plugin;
     private final Map<UUID, BukkitTask> countdownTasks = new HashMap<UUID, BukkitTask>();
     private final Map<UUID, Long> cooldowns = new HashMap<UUID, Long>();
+    private final Map<UUID, Long> unsafeConfirmations = new HashMap<UUID, Long>();
 
     public HomeTeleportManager(HomesGUI plugin) {
         this.plugin = plugin;
@@ -43,6 +46,22 @@ public final class HomeTeleportManager implements Listener {
             player.sendMessage(ChatColor.RED + "You must wait " + secondsLeft
                     + " seconds before teleporting again.");
             return;
+        }
+
+        if (isUnsafe(destination)) {
+            long window = Math.max(1, plugin.getConfig().getInt("unsafe-confirmation-window", 10)) * 1000L;
+            Long previous = unsafeConfirmations.get(uuid);
+            if (previous == null || now - previous > window) {
+                unsafeConfirmations.put(uuid, now);
+                player.sendMessage(ChatColor.RED + "Warning: " + ChatColor.YELLOW
+                        + "This home may be unsafe (hazardous blocks or no safe floor).");
+                player.sendMessage(ChatColor.YELLOW + "Click the same home again within "
+                        + (window / 1000L) + " seconds to confirm teleporting.");
+                return;
+            }
+            unsafeConfirmations.remove(uuid);
+        } else {
+            unsafeConfirmations.remove(uuid);
         }
 
         int delay = Math.max(0, plugin.getConfig().getInt("teleport-delay", 5));
@@ -79,9 +98,32 @@ public final class HomeTeleportManager implements Listener {
         countdownTasks.put(uuid, task);
     }
 
+    private boolean isUnsafe(Location location) {
+        if (location == null || location.getWorld() == null) return true;
+
+        Block feet = location.getBlock();
+        Block head = feet.getRelative(0, 1, 0);
+        Block floor = feet.getRelative(0, -1, 0);
+
+        if (isHazard(feet.getType()) || isHazard(head.getType()) || isHazard(floor.getType())) {
+            return true;
+        }
+
+        return floor.getType() == Material.AIR || floor.isLiquid()
+                || feet.getType().isSolid() || head.getType().isSolid();
+    }
+
+    private boolean isHazard(Material material) {
+        return material == Material.LAVA
+                || material == Material.STATIONARY_LAVA
+                || material == Material.FIRE
+                || material == Material.CACTUS
+                || material == Material.MAGMA
+                || material == Material.SPIKE;
+    }
+
     private void finishTeleport(Player player, Location destination, String homeName) {
         Location from = player.getLocation();
-
         from.getWorld().spawnParticle(Particle.PORTAL, from, 40, 0.5, 1.0, 0.5, 0.2);
         player.playSound(from, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
@@ -92,9 +134,7 @@ public final class HomeTeleportManager implements Listener {
         player.playSound(to, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
         int cooldown = Math.max(0, plugin.getConfig().getInt("teleport-cooldown", 30));
-        if (cooldown > 0) {
-            cooldowns.put(player.getUniqueId(), System.currentTimeMillis() + cooldown * 1000L);
-        }
+        if (cooldown > 0) cooldowns.put(player.getUniqueId(), System.currentTimeMillis() + cooldown * 1000L);
 
         sendActionBar(player, ChatColor.GREEN + "Teleported to " + homeName + "!");
         player.sendMessage(ChatColor.GREEN + "Teleported to " + homeName + ".");
@@ -105,9 +145,7 @@ public final class HomeTeleportManager implements Listener {
         UUID uuid = event.getPlayer().getUniqueId();
         if (!countdownTasks.containsKey(uuid)
                 || !plugin.getConfig().getBoolean("cancel-on-move", true)
-                || event.getTo() == null) {
-            return;
-        }
+                || event.getTo() == null) return;
 
         Location from = event.getFrom();
         Location to = event.getTo();
@@ -122,10 +160,7 @@ public final class HomeTeleportManager implements Listener {
 
     @EventHandler
     public void onDamage(EntityDamageEvent event) {
-        if (!(event.getEntity() instanceof Player)) {
-            return;
-        }
-
+        if (!(event.getEntity() instanceof Player)) return;
         Player player = (Player) event.getEntity();
         UUID uuid = player.getUniqueId();
         if (countdownTasks.containsKey(uuid)
@@ -137,9 +172,7 @@ public final class HomeTeleportManager implements Listener {
 
     private void cancelCountdown(UUID uuid) {
         BukkitTask task = countdownTasks.remove(uuid);
-        if (task != null) {
-            task.cancel();
-        }
+        if (task != null) task.cancel();
     }
 
     private void sendActionBar(Player player, String message) {
