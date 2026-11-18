@@ -22,7 +22,6 @@ public final class HomeTeleportManager implements Listener {
 
     private final HomesGUI plugin;
     private final Map<UUID, BukkitTask> countdownTasks = new HashMap<UUID, BukkitTask>();
-    private final Map<UUID, Location> startingLocations = new HashMap<UUID, Location>();
     private final Map<UUID, Long> cooldowns = new HashMap<UUID, Long>();
 
     public HomeTeleportManager(HomesGUI plugin) {
@@ -47,8 +46,6 @@ public final class HomeTeleportManager implements Listener {
         }
 
         int delay = Math.max(0, plugin.getConfig().getInt("teleport-delay", 5));
-        startingLocations.put(uuid, player.getLocation().clone());
-
         if (delay == 0) {
             finishTeleport(player, destination, homeName);
             return;
@@ -83,7 +80,6 @@ public final class HomeTeleportManager implements Listener {
     }
 
     private void finishTeleport(Player player, Location destination, String homeName) {
-        UUID uuid = player.getUniqueId();
         Location from = player.getLocation();
 
         from.getWorld().spawnParticle(Particle.PORTAL, from, 40, 0.5, 1.0, 0.5, 0.2);
@@ -97,12 +93,11 @@ public final class HomeTeleportManager implements Listener {
 
         int cooldown = Math.max(0, plugin.getConfig().getInt("teleport-cooldown", 30));
         if (cooldown > 0) {
-            cooldowns.put(uuid, System.currentTimeMillis() + cooldown * 1000L);
+            cooldowns.put(player.getUniqueId(), System.currentTimeMillis() + cooldown * 1000L);
         }
 
         sendActionBar(player, ChatColor.GREEN + "Teleported to " + homeName + "!");
         player.sendMessage(ChatColor.GREEN + "Teleported to " + homeName + ".");
-        startingLocations.remove(uuid);
     }
 
     @EventHandler
@@ -145,7 +140,6 @@ public final class HomeTeleportManager implements Listener {
         if (task != null) {
             task.cancel();
         }
-        startingLocations.remove(uuid);
     }
 
     private void sendActionBar(Player player, String message) {
