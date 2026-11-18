@@ -34,7 +34,6 @@ public final class HomeMenu implements CommandExecutor, Listener {
     private final Set<Integer> homeSlots = new HashSet<Integer>();
     private final Map<String, Long> pendingActions = new HashMap<String, Long>();
     private final Map<UUID, Integer> pendingRenames = new HashMap<UUID, Integer>();
-    private final Map<UUID, Integer> selectedHomes = new HashMap<UUID, Integer>();
 
     public HomeMenu(HomesGUI plugin, HomeTeleportManager teleportManager) {
         this.plugin = plugin;
@@ -84,7 +83,6 @@ public final class HomeMenu implements CommandExecutor, Listener {
         if (!homeSlots.contains(slot)) return;
         Player player = (Player) event.getWhoClicked();
         int number = slot - HOME_SLOTS[0] + 1;
-        selectedHomes.put(player.getUniqueId(), number);
 
         if (!storage.hasHome(player, number)) {
             try {
@@ -145,21 +143,6 @@ public final class HomeMenu implements CommandExecutor, Listener {
                     ? ChatColor.RED + "Shift + right-click this home again within 3 seconds to delete it."
                     : ChatColor.YELLOW + "Right-click this home again within 3 seconds to overwrite it.");
         }
-    }
-
-    @EventHandler
-    public void onDrop(PlayerDropItemEvent event) {
-        Player player = event.getPlayer();
-        if (!MENU_TITLE.equals(player.getOpenInventory().getTitle())) return;
-        event.setCancelled(true);
-        Integer number = selectedHomes.get(player.getUniqueId());
-        if (number == null || !storage.hasHome(player, number)) {
-            player.sendMessage(ChatColor.RED + "Click a saved home first to select it for renaming.");
-            return;
-        }
-        pendingRenames.put(player.getUniqueId(), number);
-        player.closeInventory();
-        player.sendMessage(ChatColor.YELLOW + "Type the new home name in chat, or type cancel.");
     }
 
     @EventHandler
