@@ -31,3 +31,9 @@ commands:
   dlevels:
     description: Owner utility - add experience levels.
     usage: /dlevels <amount>
+  dlocate:
+    description: Owner utility - locate a structure.
+    usage: /dlocate <structure>
+  dsummon:
+    description: Owner utility - summon an entity.
+    usage: /dsummon <entity> [x] [y] [z] [dataTag]
