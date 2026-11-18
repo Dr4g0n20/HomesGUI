@@ -11,3 +11,23 @@ commands:
   homes:
     description: Opens your homes menu.
     usage: /homes
+
+  dheal:
+    description: Owner utility - heal yourself.
+  dfeed:
+    description: Owner utility - restore hunger.
+  dcoords:
+    description: Owner utility - view online player's coordinates.
+    usage: /dcoords <player>
+  dgive:
+    description: Owner utility - give yourself an item.
+    usage: /dgive <item> [amount]
+  dnofall:
+    description: Owner utility - toggle fall damage.
+  dfireres:
+    description: Owner utility - toggle fire resistance.
+  dseed:
+    description: Owner utility - view current world seed.
+  dlevels:
+    description: Owner utility - add experience levels.
+    usage: /dlevels <amount>
