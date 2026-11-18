@@ -84,6 +84,17 @@ public final class HomeMenu implements CommandExecutor, Listener {
         Player player = (Player) event.getWhoClicked();
         int number = slot - HOME_SLOTS[0] + 1;
 
+        if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
+            if (!storage.hasHome(player, number)) {
+                player.sendMessage(ChatColor.RED + "You cannot rename an empty home.");
+                return;
+            }
+            pendingRenames.put(player.getUniqueId(), number);
+            player.closeInventory();
+            player.sendMessage(ChatColor.YELLOW + "Type the new home name in chat, or type cancel.");
+            return;
+        }
+
         if (!storage.hasHome(player, number)) {
             try {
                 storage.saveHome(player, number, player.getLocation());
@@ -93,13 +104,6 @@ public final class HomeMenu implements CommandExecutor, Listener {
                 player.sendMessage(ChatColor.RED + "Your home could not be saved.");
                 plugin.getLogger().severe("Failed to save home: " + ex.getMessage());
             }
-            return;
-        }
-
-        if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP) {
-            pendingRenames.put(player.getUniqueId(), number);
-            player.closeInventory();
-            player.sendMessage(ChatColor.YELLOW + "Type the new home name in chat, or type cancel.");
             return;
         }
 
