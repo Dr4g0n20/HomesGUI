@@ -62,17 +62,35 @@ public final class HomeMenu implements CommandExecutor, Listener {
             boolean saved = storage.hasHome(player, number);
             String name = storage.getHomeName(player, number);
             org.bukkit.Location savedLocation = saved ? storage.getHome(player, number) : null;
-            boolean unsafe = saved && (savedLocation == null || teleportManager.isUnsafe(savedLocation));
+            boolean worldUnavailable = saved && savedLocation == null;
+            boolean unsafe = saved && (worldUnavailable || teleportManager.isUnsafe(savedLocation));
             short bedColor = saved ? (unsafe ? (short) 14 : (short) 13) : (short) 0;
             String bedNameColor = saved ? (unsafe ? ChatColor.RED.toString() : ChatColor.GREEN.toString()) : ChatColor.WHITE.toString();
-            ItemStack bed = createItem(Material.BED, 1, bedColor, bedNameColor + name,
-                    saved ? Arrays.asList(unsafe ? ChatColor.RED.toString() + "Unsafe home" : ChatColor.GREEN.toString() + "Safe home",
-                            ChatColor.YELLOW + "Left-click: teleport",
-                            ChatColor.YELLOW + "Right-click twice: overwrite",
-                            ChatColor.YELLOW + "Shift + right-click twice: delete",
-                            ChatColor.YELLOW + "Click then press Q: rename")
-                          : Arrays.asList(ChatColor.GRAY + "Currently empty",
-                            ChatColor.YELLOW + "Click to save your location"));
+
+            java.util.List<String> lore = new java.util.ArrayList<String>();
+            if (!saved) {
+                lore.add(ChatColor.GRAY + "Currently empty");
+                lore.add(ChatColor.YELLOW + "Click to save your location");
+            } else {
+                lore.add(unsafe ? ChatColor.RED + "Unsafe home" : ChatColor.GREEN + "Safe home");
+                if (worldUnavailable) {
+                    lore.add(ChatColor.RED + "World is not currently loaded.");
+                } else {
+                    lore.add(ChatColor.GRAY + "World: " + ChatColor.WHITE + savedLocation.getWorld().getName());
+                    lore.add(ChatColor.GRAY + "Coordinates: " + ChatColor.WHITE
+                            + savedLocation.getBlockX() + ", " + savedLocation.getBlockY() + ", " + savedLocation.getBlockZ());
+                    if (unsafe) {
+                        lore.add(ChatColor.RED + teleportManager.getUnsafeReason(savedLocation));
+                    } else {
+                        lore.add(ChatColor.GREEN + "No detected hazards.");
+                    }
+                }
+                lore.add(ChatColor.YELLOW + "Left-click: teleport");
+                lore.add(ChatColor.YELLOW + "Right-click twice: overwrite");
+                lore.add(ChatColor.YELLOW + "Shift + right-click twice: delete");
+                lore.add(ChatColor.YELLOW + "Click then press Q: rename");
+            }
+            ItemStack bed = createItem(Material.BED, 1, bedColor, bedNameColor + name, lore);
             inventory.setItem(HOME_SLOTS[i], bed);
         }
         player.openInventory(inventory);
