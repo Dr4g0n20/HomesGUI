@@ -88,7 +88,7 @@ public final class HomeTeleportManager implements Listener {
                 secondsRemaining[0]--;
                 if (secondsRemaining[0] <= 0) {
                     cancelCountdown(uuid);
-                    finishTeleport(player, destination, homeName);
+                    finishTeleport(player, destination, homeName, onSuccess);
                     return;
                 }
 
