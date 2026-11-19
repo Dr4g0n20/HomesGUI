@@ -79,6 +79,20 @@ public final class HomeMenu implements CommandExecutor, Listener {
                     lore.add(ChatColor.GRAY + "World: " + ChatColor.WHITE + savedLocation.getWorld().getName());
                     lore.add(ChatColor.GRAY + "Coordinates: " + ChatColor.WHITE
                             + savedLocation.getBlockX() + ", " + savedLocation.getBlockY() + ", " + savedLocation.getBlockZ());
+                    if (savedLocation.getWorld().equals(player.getWorld())) {
+                        double distance = player.getLocation().distance(savedLocation);
+                        lore.add(ChatColor.GRAY + "Distance: " + ChatColor.WHITE
+                                + String.format(java.util.Locale.US, "%.1f blocks", distance));
+                    } else {
+                        lore.add(ChatColor.GRAY + "Distance: " + ChatColor.WHITE + "Different world");
+                    }
+                    long lastVisited = storage.getLastVisited(player, number);
+                    if (lastVisited > 0L) {
+                        lore.add(ChatColor.GRAY + "Last visited: " + ChatColor.WHITE
+                                + new java.text.SimpleDateFormat("dd MMM yyyy, HH:mm").format(new java.util.Date(lastVisited)));
+                    } else {
+                        lore.add(ChatColor.GRAY + "Last visited: " + ChatColor.WHITE + "Never");
+                    }
                     if (unsafe) {
                         lore.add(ChatColor.RED + teleportManager.getUnsafeReason(savedLocation));
                     } else {
@@ -137,7 +151,16 @@ public final class HomeMenu implements CommandExecutor, Listener {
             }
             String name = storage.getHomeName(player, number);
             player.closeInventory();
-            teleportManager.startTeleport(player, destination, name);
+            teleportManager.startTeleport(player, destination, name, new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        storage.markHomeVisited(player, number);
+                    } catch (IOException ex) {
+                        plugin.getLogger().warning("Could not update last-visited time: " + ex.getMessage());
+                    }
+                }
+            });
             return;
         }
 
