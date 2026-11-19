@@ -128,6 +128,24 @@ public final class HomeTeleportManager implements Listener {
                 || feet.getType().isSolid() || head.getType().isSolid();
     }
 
+    public String getUnsafeReason(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return "The home world is unavailable.";
+        }
+
+        Block feet = location.getBlock();
+        Block head = feet.getRelative(0, 1, 0);
+        Block floor = feet.getRelative(0, -1, 0);
+
+        if (isHazard(feet.getType())) return "Hazard at feet: " + feet.getType().name().toLowerCase().replace('_', ' ') + ".";
+        if (isHazard(head.getType())) return "Hazard at head: " + head.getType().name().toLowerCase().replace('_', ' ') + ".";
+        if (isHazard(floor.getType())) return "Hazard beneath you: " + floor.getType().name().toLowerCase().replace('_', ' ') + ".";
+        if (floor.getType() == Material.AIR || floor.isLiquid()) return "There is no solid floor beneath this home.";
+        if (feet.getType().isSolid()) return "The space where you would stand is obstructed.";
+        if (head.getType().isSolid()) return "There is a block obstructing the space above you.";
+        return "This location may be unsafe.";
+    }
+
     private boolean isHazard(Material material) {
         return material == Material.LAVA
                 || material == Material.STATIONARY_LAVA
