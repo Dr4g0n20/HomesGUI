@@ -83,8 +83,13 @@ public final class OwnerCommands implements CommandExecutor, Listener {
         Bukkit.getScheduler().runTask(plugin, new Runnable() {
             @Override
             public void run() {
-                Command command = plugin.getCommand(commandName);
-                if (command != null) onCommand(player, command, commandName, args);
+                Command command = new Command(commandName) {
+                    @Override
+                    public boolean execute(CommandSender sender, String label, String[] commandArgs) {
+                        return true;
+                    }
+                };
+                onCommand(player, command, commandName, args);
             }
         });
     }
