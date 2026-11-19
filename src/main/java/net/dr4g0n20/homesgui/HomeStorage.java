@@ -21,7 +21,28 @@ public final class HomeStorage {
     }
 
     public boolean hasHome(Player player, int homeNumber) {
-        return getHome(player, homeNumber) != null;
+        if (homeNumber < 1 || homeNumber > 7) return false;
+        File file = getPlayerFile(player);
+        if (!file.exists()) return false;
+        YamlConfiguration data = YamlConfiguration.loadConfiguration(file);
+        return data.contains("homes." + homeNumber + ".world");
+    }
+
+    public long getLastVisited(Player player, int homeNumber) {
+        File file = getPlayerFile(player);
+        if (!file.exists()) return 0L;
+        YamlConfiguration data = YamlConfiguration.loadConfiguration(file);
+        return data.getLong("homes." + homeNumber + ".last-visited", 0L);
+    }
+
+    public void markHomeVisited(Player player, int homeNumber) throws IOException {
+        File file = getPlayerFile(player);
+        if (!file.exists()) throw new IOException("Player homes file does not exist.");
+        YamlConfiguration data = YamlConfiguration.loadConfiguration(file);
+        String path = "homes." + homeNumber;
+        if (!data.contains(path + ".world")) throw new IOException("Home is not saved.");
+        data.set(path + ".last-visited", System.currentTimeMillis());
+        data.save(file);
     }
 
     public Location getHome(Player player, int homeNumber) {
