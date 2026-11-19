@@ -19,9 +19,6 @@ public final class HomesGUI extends JavaPlugin {
         getCommand("homes").setExecutor(homeMenu);
 
         ownerCommands = new OwnerCommands(this);
-        for (String commandName : new String[] {"dheal", "dfeed", "dcoords", "dgive", "dnofall", "dfireres", "dseed", "dlevels", "dlocate", "dsummon", "dfly", "drepair", "dinfo", "dextinguish", "dspawn", "dweather", "dday", "dnight", "dhelp", "denderchest", "dworkbench", "danvil", "dback", "dtime", "dchunk", "ditem", "drename", "dlore", "dclear"}) {
-            getCommand(commandName).setExecutor(ownerCommands);
-        }
         getServer().getPluginManager().registerEvents(ownerCommands, this);
         ownerCommands.hideCommandsFromHelp();
 
