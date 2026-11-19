@@ -77,22 +77,42 @@ public final class HomeMenu implements CommandExecutor, Listener {
                     lore.add(ChatColor.RED + "World is not currently loaded.");
                 } else {
                     lore.add(ChatColor.GRAY + "World: " + ChatColor.WHITE + savedLocation.getWorld().getName());
+                    String dimension;
+                    switch (savedLocation.getWorld().getEnvironment()) {
+                        case NETHER:
+                            dimension = "Nether";
+                            break;
+                        case THE_END:
+                            dimension = "The End";
+                            break;
+                        default:
+                            dimension = "Overworld";
+                            break;
+                    }
+                    lore.add(ChatColor.GRAY + "Dimension: " + ChatColor.WHITE + dimension);
+                    org.bukkit.block.Biome biome = savedLocation.getWorld().getBiome(
+                            savedLocation.getBlockX(), savedLocation.getBlockZ());
+                    lore.add(ChatColor.GRAY + "Biome: " + ChatColor.WHITE + formatBiome(biome.name()));
                     lore.add(ChatColor.GRAY + "Coordinates: " + ChatColor.WHITE
-                            + savedLocation.getBlockX() + ", " + savedLocation.getBlockY() + ", " + savedLocation.getBlockZ());
+                            + "X: " + savedLocation.getBlockX() + " | Y: " + savedLocation.getBlockY()
+                            + " | Z: " + savedLocation.getBlockZ());
                     if (savedLocation.getWorld().equals(player.getWorld())) {
                         double distance = player.getLocation().distance(savedLocation);
                         lore.add(ChatColor.GRAY + "Distance: " + ChatColor.WHITE
-                                + String.format(java.util.Locale.US, "%.1f blocks", distance));
+                                + String.format(java.util.Locale.US, "%.1f blocks away", distance));
                     } else {
                         lore.add(ChatColor.GRAY + "Distance: " + ChatColor.WHITE + "Different world");
                     }
-                    long lastVisited = storage.getLastVisited(player, number);
-                    if (lastVisited > 0L) {
-                        lore.add(ChatColor.GRAY + "Last visited: " + ChatColor.WHITE
-                                + new java.text.SimpleDateFormat("dd MMM yyyy, HH:mm").format(new java.util.Date(lastVisited)));
+                    long createdAt = storage.getCreatedAt(player, number);
+                    if (createdAt > 0L) {
+                        lore.add(ChatColor.GRAY + "Created: " + ChatColor.WHITE
+                                + new java.text.SimpleDateFormat("dd MMM yyyy").format(new java.util.Date(createdAt)));
                     } else {
-                        lore.add(ChatColor.GRAY + "Last visited: " + ChatColor.WHITE + "Never");
+                        lore.add(ChatColor.GRAY + "Created: " + ChatColor.WHITE + "Not recorded (older home)");
                     }
+                    long lastVisited = storage.getLastVisited(player, number);
+                    lore.add(ChatColor.GRAY + "Last visited: " + ChatColor.WHITE
+                            + (lastVisited > 0L ? formatTimeSince(lastVisited) : "Never"));
                     if (unsafe) {
                         lore.add(ChatColor.RED + teleportManager.getUnsafeReason(savedLocation));
                     } else {
@@ -224,6 +244,31 @@ public final class HomeMenu implements CommandExecutor, Listener {
                 }
             }
         });
+    }
+
+    private String formatBiome(String biomeName) {
+        String[] words = biomeName.toLowerCase(java.util.Locale.US).split("_");
+        StringBuilder formatted = new StringBuilder();
+        for (String word : words) {
+            if (formatted.length() > 0) formatted.append(' ');
+            formatted.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+        return formatted.toString();
+    }
+
+    private String formatTimeSince(long timestamp) {
+        long elapsed = Math.max(0L, System.currentTimeMillis() - timestamp);
+        long minutes = elapsed / 60000L;
+        if (minutes < 1L) return "Just now";
+        if (minutes < 60L) return minutes + (minutes == 1L ? " minute ago" : " minutes ago");
+        long hours = minutes / 60L;
+        if (hours < 24L) return hours + (hours == 1L ? " hour ago" : " hours ago");
+        long days = hours / 24L;
+        if (days < 30L) return days + (days == 1L ? " day ago" : " days ago");
+        long months = days / 30L;
+        if (months < 12L) return months + (months == 1L ? " month ago" : " months ago");
+        long years = days / 365L;
+        return years + (years == 1L ? " year ago" : " years ago");
     }
 
     private ItemStack createItem(Material material, int amount, short durability, String displayName, java.util.List<String> lore) {
