@@ -31,7 +31,7 @@ public final class HomeTeleportManager implements Listener {
         this.plugin = plugin;
     }
 
-    public void startTeleport(Player player, Location destination, String homeName) {
+    public void startTeleport(Player player, Location destination, String homeName, Runnable onSuccess) {
         UUID uuid = player.getUniqueId();
 
         if (countdownTasks.containsKey(uuid)) {
@@ -69,7 +69,7 @@ public final class HomeTeleportManager implements Listener {
 
         int delay = Math.max(0, plugin.getConfig().getInt("teleport-delay", 5));
         if (delay == 0) {
-            finishTeleport(player, destination, homeName);
+            finishTeleport(player, destination, homeName, onSuccess);
             return;
         }
 
@@ -154,16 +154,20 @@ public final class HomeTeleportManager implements Listener {
                 || material == Material.MAGMA;
     }
 
-    private void finishTeleport(Player player, Location destination, String homeName) {
+    private void finishTeleport(Player player, Location destination, String homeName, Runnable onSuccess) {
         Location from = player.getLocation();
-        from.getWorld().spawnParticle(Particle.PORTAL, from, 40, 0.5, 1.0, 0.5, 0.2);
-        player.playSound(from, Sound.ENTITY_ENDERMEN_TELEPORT, 1.0f, 1.0f);
-
-        player.teleport(destination);
+        if (!player.teleport(destination)) {
+            player.sendMessage(ChatColor.RED + "Teleport failed.");
+            return;
+        }
 
         Location to = player.getLocation();
-        to.getWorld().spawnParticle(Particle.PORTAL, to, 40, 0.5, 1.0, 0.5, 0.2);
-        player.playSound(to, Sound.ENTITY_ENDERMEN_TELEPORT, 1.0f, 1.0f);
+        playTeleportEffects(from);
+        playTeleportEffects(to);
+
+        if (onSuccess != null) {
+            onSuccess.run();
+        }
 
         int cooldown = Math.max(0, plugin.getConfig().getInt("teleport-cooldown", 30));
         if (cooldown > 0) {
@@ -172,6 +176,36 @@ public final class HomeTeleportManager implements Listener {
 
         sendActionBar(player, ChatColor.GREEN + "Teleported to " + homeName + "!");
         player.sendMessage(ChatColor.GREEN + "Teleported to " + homeName + ".");
+    }
+
+
+    private void playTeleportEffects(Location location) {
+        if (location == null || location.getWorld() == null) return;
+
+        if (plugin.getConfig().getBoolean("teleport-effects.particles-enabled", true)) {
+            String particleName = plugin.getConfig().getString("teleport-effects.particle", "PORTAL");
+            int count = Math.max(0, plugin.getConfig().getInt("teleport-effects.particle-count", 40));
+            try {
+                Particle particle = Particle.valueOf(particleName.toUpperCase(java.util.Locale.ROOT));
+                location.getWorld().spawnParticle(particle, location, count, 0.5, 1.0, 0.5, 0.2);
+            } catch (IllegalArgumentException ex) {
+                plugin.getLogger().warning("Unknown teleport particle '" + particleName + "'. Using PORTAL.");
+                location.getWorld().spawnParticle(Particle.PORTAL, location, count, 0.5, 1.0, 0.5, 0.2);
+            }
+        }
+
+        if (plugin.getConfig().getBoolean("teleport-effects.sound-enabled", true)) {
+            String soundName = plugin.getConfig().getString("teleport-effects.sound", "ENTITY_ENDERMEN_TELEPORT");
+            float volume = (float) plugin.getConfig().getDouble("teleport-effects.sound-volume", 1.0);
+            float pitch = (float) plugin.getConfig().getDouble("teleport-effects.sound-pitch", 1.0);
+            try {
+                Sound sound = Sound.valueOf(soundName.toUpperCase(java.util.Locale.ROOT));
+                location.getWorld().playSound(location, sound, volume, pitch);
+            } catch (IllegalArgumentException ex) {
+                plugin.getLogger().warning("Unknown teleport sound '" + soundName + "'. Using ENTITY_ENDERMEN_TELEPORT.");
+                location.getWorld().playSound(location, Sound.ENTITY_ENDERMEN_TELEPORT, volume, pitch);
+            }
+        }
     }
 
     @EventHandler
