@@ -28,6 +28,13 @@ public final class HomeStorage {
         return data.contains("homes." + homeNumber + ".world");
     }
 
+    public long getCreatedAt(Player player, int homeNumber) {
+        File file = getPlayerFile(player);
+        if (!file.exists()) return 0L;
+        YamlConfiguration data = YamlConfiguration.loadConfiguration(file);
+        return data.getLong("homes." + homeNumber + ".created-at", 0L);
+    }
+
     public long getLastVisited(Player player, int homeNumber) {
         File file = getPlayerFile(player);
         if (!file.exists()) return 0L;
@@ -72,6 +79,9 @@ public final class HomeStorage {
         YamlConfiguration data = YamlConfiguration.loadConfiguration(file);
         String path = "homes." + homeNumber;
         data.set(path + ".name", data.getString(path + ".name", "Home " + homeNumber));
+        if (!data.contains(path + ".created-at")) {
+            data.set(path + ".created-at", System.currentTimeMillis());
+        }
         data.set(path + ".world", location.getWorld().getName());
         data.set(path + ".x", location.getX());
         data.set(path + ".y", location.getY());
