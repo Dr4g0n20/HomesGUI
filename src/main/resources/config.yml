@@ -20,3 +20,13 @@ cancel-on-move: true
 
 # Cancel teleport countdown if the player takes damage.
 cancel-on-damage: true
+
+# Effects played at the departure and arrival points after a successful home teleport.
+teleport-effects:
+  particles-enabled: true
+  particle: PORTAL
+  particle-count: 40
+  sound-enabled: true
+  sound: ENTITY_ENDERMEN_TELEPORT
+  sound-volume: 1.0
+  sound-pitch: 1.0
